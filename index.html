@@ -63,21 +63,23 @@
     let inputBuffer = '';
     let inputDisplay = '';
     
-    // 後備倉頡碼資料庫（若 cangjie.json 載入失敗）
+    // 後備倉頡碼資料庫
     let cangjieDB = [
       { char: '日', code: 'A', level: 1 },
       { char: '月', code: 'B', level: 1 },
       { char: '口', code: 'R', level: 1 },
       { char: '由', code: 'HW', level: 2 },
       { char: '田', code: 'W', level: 2 },
+      { char: '白', code: 'HA', level: 2 },
       { char: '丹', code: 'MY', level: 3 },
+      { char: '舟', code: 'HY', level: 3 },
       { char: '好', code: 'VND', level: 4 },
       { char: '明', code: 'AB', level: 4 },
       { char: '電', code: 'MFB', level: 6 },
       { char: '機', code: 'MGRR', level: 8 }
     ];
     
-    // 載入 cangjie.json（若存在）
+    // 載入 cangjie.json
     fetch('cangjie.json')
       .then(response => {
         if (!response.ok) throw new Error('cangjie.json not found');
@@ -184,14 +186,11 @@
     
     function spawnWord() {
       let maxLevel = difficulty === 1 ? 3 : (difficulty === 5 ? 7 : 10);
-      // 簡化篩選邏輯，優先匹配當前關卡
       let availableWords = cangjieDB.filter(w => w.level === level && w.level <= maxLevel);
       if (availableWords.length === 0) {
-        // 放寬條件，選擇接近難度的文字
         availableWords = cangjieDB.filter(w => w.level <= maxLevel);
       }
       if (availableWords.length === 0) {
-        // 若仍無文字，使用後備資料庫
         availableWords = cangjieDB;
       }
       let word = random(availableWords);
@@ -241,11 +240,13 @@
     }
     
     function updateInputDisplay() {
-      inputDisplay = '';
-      for (let i = 0; i < inputBuffer.length; i++) {
-        let code = inputBuffer[i];
-        let word = cangjieDB.find(w => w.code === code);
-        inputDisplay += word ? word.char : code;
+      // 檢查完整輸入是否匹配倉頡碼
+      let word = cangjieDB.find(w => w.code === inputBuffer);
+      if (word) {
+        inputDisplay = word.char; // 顯示完整中文字
+      } else {
+        // 若部分輸入，顯示原始字母
+        inputDisplay = inputBuffer;
       }
     }
     
@@ -267,7 +268,7 @@
         inputDisplay = '';
         
         if (eliminatedWords >= 10) {
-          level = min(level + 1, 10);
+          level = Math.min(level + 1, 10);
           eliminatedWords = 0;
         }
       } else {
