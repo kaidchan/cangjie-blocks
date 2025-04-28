@@ -62,16 +62,34 @@
     let eliminatedWords = 0;
     let inputBuffer = '';
     let inputDisplay = '';
-    let cangjieDB = [];
     
-    // 載入倉頡碼資料庫
+    // 後備倉頡碼資料庫（若 cangjie.json 載入失敗）
+    let cangjieDB = [
+      { char: '日', code: 'A', level: 1 },
+      { char: '月', code: 'B', level: 1 },
+      { char: '口', code: 'R', level: 1 },
+      { char: '由', code: 'HW', level: 2 },
+      { char: '田', code: 'W', level: 2 },
+      { char: '丹', code: 'MY', level: 3 },
+      { char: '好', code: 'VND', level: 4 },
+      { char: '明', code: 'AB', level: 4 },
+      { char: '電', code: 'MFB', level: 6 },
+      { char: '機', code: 'MGRR', level: 8 }
+    ];
+    
+    // 載入 cangjie.json（若存在）
     fetch('cangjie.json')
-      .then(response => response.json())
+      .then(response => {
+        if (!response.ok) throw new Error('cangjie.json not found');
+        return response.json();
+      })
       .then(data => {
         cangjieDB = data;
         console.log('Cangjie DB loaded:', cangjieDB.length, 'entries');
       })
-      .catch(error => console.error('Error loading cangjie.json:', error));
+      .catch(error => {
+        console.warn('Failed to load cangjie.json, using fallback DB:', error);
+      });
     
     function setup() {
       let canvas = createCanvas(600, 800);
@@ -166,15 +184,15 @@
     
     function spawnWord() {
       let maxLevel = difficulty === 1 ? 3 : (difficulty === 5 ? 7 : 10);
-      // 根據關卡篩選文字
+      // 簡化篩選邏輯，優先匹配當前關卡
       let availableWords = cangjieDB.filter(w => w.level === level && w.level <= maxLevel);
       if (availableWords.length === 0) {
-        // 若當前關卡無合適文字，選擇相近難度的文字
-        availableWords = cangjieDB.filter(w => w.level <= maxLevel && w.level >= level - 1);
+        // 放寬條件，選擇接近難度的文字
+        availableWords = cangjieDB.filter(w => w.level <= maxLevel);
       }
       if (availableWords.length === 0) {
-        // 若仍無可用文字，選擇所有低於最大難度的文字
-        availableWords = cangjieDB.filter(w => w.level <= maxLevel);
+        // 若仍無文字，使用後備資料庫
+        availableWords = cangjieDB;
       }
       let word = random(availableWords);
       words.push({
