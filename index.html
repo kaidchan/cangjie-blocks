@@ -61,21 +61,17 @@
     let level = 1;
     let eliminatedWords = 0;
     let inputBuffer = '';
-    let inputDisplay = ''; // 用於顯示輸入的中文字
+    let inputDisplay = '';
+    let cangjieDB = [];
     
-    // 倉頡碼資料庫
-    const cangjieDB = [
-      { char: '日', code: 'A', level: 1 },
-      { char: '月', code: 'B', level: 1 },
-      { char: '口', code: 'R', level: 1 },
-      { char: '田', code: 'W', level: 2 },
-      { char: '好', code: 'VND', level: 5 },
-      { char: '明', code: 'AB', level: 3 },
-      { char: '星', code: 'AP', level: 4 },
-      { char: '機', code: 'MGRR', level: 10 },
-      { char: '電', code: 'MFB', level: 8 },
-      { char: '腦', code: 'YTBU', level: 10 }
-    ];
+    // 載入倉頡碼資料庫
+    fetch('cangjie.json')
+      .then(response => response.json())
+      .then(data => {
+        cangjieDB = data;
+        console.log('Cangjie DB loaded:', cangjieDB.length, 'entries');
+      })
+      .catch(error => console.error('Error loading cangjie.json:', error));
     
     function setup() {
       let canvas = createCanvas(600, 800);
@@ -102,7 +98,7 @@
         startDiv = createDiv().id('start-screen');
         startDiv.html(`
           <h1>倉頡方塊</h1>
-          <p>選擇遊戲速度和難度，輸入倉頡碼消除跌落文字！</p>
+          <p>選擇遊戲速度和難度，輸入倉頡碼並按空格鍵消除跌落文字！</p>
           <label>速度：</label>
           <select id="speed-select">
             <option value="1">慢速</option>
@@ -158,7 +154,7 @@
         text(word.char, word.x, word.y);
       }
       
-      // 顯示分數、關卡和輸入文字（移到畫面底部）
+      // 顯示分數、關卡和輸入文字（底部）
       fill(0);
       textSize(20);
       text(`分數: ${score} 關卡: ${level} 輸入: ${inputDisplay}`, width / 2, height - 30);
@@ -170,8 +166,14 @@
     
     function spawnWord() {
       let maxLevel = difficulty === 1 ? 3 : (difficulty === 5 ? 7 : 10);
-      let availableWords = cangjieDB.filter(w => w.level <= maxLevel && w.level >= level - 2 && w.level <= level);
+      // 根據關卡篩選文字
+      let availableWords = cangjieDB.filter(w => w.level === level && w.level <= maxLevel);
       if (availableWords.length === 0) {
+        // 若當前關卡無合適文字，選擇相近難度的文字
+        availableWords = cangjieDB.filter(w => w.level <= maxLevel && w.level >= level - 1);
+      }
+      if (availableWords.length === 0) {
+        // 若仍無可用文字，選擇所有低於最大難度的文字
         availableWords = cangjieDB.filter(w => w.level <= maxLevel);
       }
       let word = random(availableWords);
@@ -207,7 +209,7 @@
         if (keyCode === BACKSPACE) {
           inputBuffer = inputBuffer.slice(0, -1);
           updateInputDisplay();
-        } else if (keyCode === ENTER) {
+        } else if (keyCode === 32) { // Space 鍵
           checkInput();
         }
       }
@@ -221,12 +223,11 @@
     }
     
     function updateInputDisplay() {
-      // 將輸入的倉頡碼轉為對應中文字
       inputDisplay = '';
       for (let i = 0; i < inputBuffer.length; i++) {
         let code = inputBuffer[i];
         let word = cangjieDB.find(w => w.code === code);
-        inputDisplay += word ? word.char : code; // 若無對應中文字，顯示原始碼
+        inputDisplay += word ? word.char : code;
       }
     }
     
@@ -254,6 +255,8 @@
       } else {
         inputBuffer = '';
         inputDisplay = '';
+        fill(255, 0, 0);
+        text("輸入錯誤！", width / 2, height / 2);
       }
     }
   </script>
