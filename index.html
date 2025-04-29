@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>倉頡方塊</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+  <!-- p5.js CDN 與本地後備 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js" onerror="console.error('p5.js CDN failed to load'); document.body.innerHTML = '<h1>錯誤：無法加載 p5.js，請檢查網絡或稍後重試</h1>'"></script>
   <style>
     body {
       display: flex;
@@ -63,7 +64,7 @@
     let inputBuffer = '';
     let inputDisplay = '';
     let errorTimer = 0;
-    
+
     // 硬編碼倉頡碼資料庫（50 個字，修正拼寫錯誤）
     const cangjieDB = [
       {"char": "日", "code": "A", "level": 1},
@@ -100,7 +101,6 @@
       {"char": "明", "code": "AB", "level": 4},
       {"char": "星", "code": "AP", "level": 4},
       {"char": "早", "code": "AJ", "level": 4},
-      BZ{"char": "虫", "code": "LMI", "level": 4},
       {"char": "里", "code": "WGG", "level": 5},
       {"char": "吳", "code": "RML", "level": 5},
       {"char": "店", "code": "YTD", "level": 5},
@@ -116,26 +116,36 @@
       {"char": "靈", "code": "FFBM", "level": 10},
       {"char": "廳", "code": "JTMN", "level": 10}
     ];
-    
+
     function setup() {
-      let canvas = createCanvas(600, 800);
-      canvas.parent('game-container');
-      textAlign(CENTER, CENTER);
-      textSize(32);
-    }
-    
-    function draw() {
-      background(220);
-      
-      if (gameState === 'start') {
-        drawStartScreen();
-      } else if (gameState === 'playing') {
-        drawGame();
-      } else if (gameState === 'gameOver') {
-        drawGameOverScreen();
+      try {
+        let canvas = createCanvas(600, 800);
+        canvas.parent('game-container');
+        textAlign(CENTER, CENTER);
+        textSize(32);
+        console.log('Setup complete: Canvas initialized');
+      } catch (e) {
+        console.error('Setup failed:', e);
+        document.body.innerHTML = '<h1>錯誤：遊戲初始化失敗，請檢查 Console 或聯繫開發者</h1>';
       }
     }
-    
+
+    function draw() {
+      try {
+        background(220);
+        if (gameState === 'start') {
+          drawStartScreen();
+        } else if (gameState === 'playing') {
+          drawGame();
+        } else if (gameState === 'gameOver') {
+          drawGameOverScreen();
+        }
+        console.log(`Draw called: gameState = ${gameState}`);
+      } catch (e) {
+        console.error('Draw failed:', e);
+      }
+    }
+
     function drawStartScreen() {
       let startDiv = select('#start-screen');
       if (!startDiv) {
@@ -157,38 +167,167 @@
           </select><br>
           <button onclick="startGame()">開始</button>
         `);
+        console.log('Start screen created');
       }
     }
-    
+
     function startGame() {
-      speed = parseInt(select('#speed-select').value());
-      difficulty = parseInt(select('#difficulty-select').value());
-      fallSpeed = speed * 2;
-      words = [];
-      score = 0;
-      level = 1;
-      eliminatedWords = 0;
-      inputBuffer = '';
-      inputDisplay = '';
-      errorTimer = 0;
-      select('#start-screen').remove();
-      gameState = 'playing';
-      spawnWord();
+      try {
+        speed = parseInt(select('#speed-select').value());
+        difficulty = parseInt(select('#difficulty-select').value());
+        fallSpeed = speed * 2;
+        words = [];
+        score = 0;
+        level = 1;
+        eliminatedWords = 0;
+        inputBuffer = '';
+        inputDisplay = '';
+        errorTimer = 0;
+        select('#start-screen').remove();
+        gameState = 'playing';
+        spawnWord();
+        console.log(`Game started: speed=${speed}, difficulty=${difficulty}`);
+      } catch (e) {
+        console.error('Start game failed:', e);
+      }
     }
-    
+
     function drawGame() {
       fill(255);
       rect(0, 0, width, height);
-      
+
       for (let i = words.length - 1; i >= 0; i--) {
         let word = words[i];
         if (!word.isStatic) {
           word.y += fallSpeed / frameRate();
         }
-        
         if (word.y >= height - 40 && !word.isStatic) {
           word.isStatic = true;
           spawnWord();
         }
-        
-        if (word.y <=
+        if (word.y <= 40 && word.isStatic) {
+          gameState = 'gameOver';
+        }
+        fill(word.isStatic ? 100 : 0);
+        text(word.char, word.x, word.y);
+      }
+
+      // 底部資訊欄
+      fill(0);
+      textSize(20);
+      text(`分數: ${score} 關卡: ${level} 輸入: ${inputDisplay}`, width / 2, height - 30);
+
+      // 錯誤提示（2 秒）
+      if (errorTimer > 0) {
+        fill(255, 0, 0);
+        text("輸入錯誤！", width / 2, height / 2);
+        errorTimer--;
+      }
+
+      if (frameCount % (180 / speed) === 0) {
+        spawnWord();
+      }
+    }
+
+    function spawnWord() {
+      let maxLevel = difficulty === 1 ? 3 : (difficulty === 5 ? 7 : 10);
+      let availableWords = cangjieDB.filter(w => w.level === level && w.level <= maxLevel);
+      if (availableWords.length === 0) {
+        availableWords = cangjieDB.filter(w => w.level <= maxLevel);
+      }
+      if (availableWords.length === 0) {
+        availableWords = cangjieDB;
+      }
+      let word = random(availableWords);
+      words.push({
+        char: word.char,
+        code: word.code,
+        x: random(50, width - 50),
+        y: 40,
+        isStatic: false
+      });
+      console.log(`Spawned word: ${word.char} (${word.code}), Level: ${level}`);
+    }
+
+    function drawGameOverScreen() {
+      let gameOverDiv = select('#game-over-screen');
+      if (!gameOverDiv) {
+        gameOverDiv = createDiv().id('game-over-screen');
+        gameOverDiv.html(`
+          <h1>遊戲結束</h1>
+          <p>最終分數: ${score}</p>
+          <p>最終關卡: ${level}</p>
+          <button onclick="restartGame()">重新開始</button>
+        `);
+        console.log('Game over screen created');
+      }
+    }
+
+    function restartGame() {
+      select('#game-over-screen').remove();
+      gameState = 'start';
+      console.log('Game restarted');
+    }
+
+    function keyPressed() {
+      if (gameState === 'playing') {
+        if (keyCode === BACKSPACE) {
+          inputBuffer = inputBuffer.slice(0, -1);
+          updateInputDisplay();
+        } else if (keyCode === 32) {
+          checkInput();
+        }
+      }
+    }
+
+    function keyTyped() {
+      if (gameState === 'playing' && key.match(/[a-z]/i)) {
+        inputBuffer += key.toUpperCase();
+        updateInputDisplay();
+      }
+    }
+
+    function updateInputDisplay() {
+      let word = cangjieDB.find(w => w.code === inputBuffer);
+      inputDisplay = word ? word.char : inputBuffer;
+      console.log(`Input: ${inputBuffer}, Display: ${inputDisplay}`);
+    }
+
+    function checkInput() {
+      let lowestWord = null;
+      let minY = -Infinity;
+      for (let word of words) {
+        if (!word.isStatic && word.y > minY) {
+          lowestWord = word;
+          minY = word.y;
+        }
+      }
+      if (lowestWord) {
+        console.log(`Check input: ${inputBuffer}, Expected: ${lowestWord.code}, Word: ${lowestWord.char}`);
+        if (inputBuffer === lowestWord.code) {
+          words.splice(words.indexOf(lowestWord), 1);
+          score += 100;
+          eliminatedWords++;
+          inputBuffer = '';
+          inputDisplay = '';
+          if (eliminatedWords >= 10) {
+            level = Math.min(level + 1, 10);
+            eliminatedWords = 0;
+          }
+          console.log(`Word eliminated: ${lowestWord.char}, Score: ${score}, Level: ${level}`);
+        } else {
+          console.log(`Input mismatch: ${inputBuffer} != ${lowestWord.code}`);
+          inputBuffer = '';
+          inputDisplay = '';
+          errorTimer = 120;
+        }
+      } else {
+        console.log('No lowest word available');
+        inputBuffer = '';
+        inputDisplay = '';
+        errorTimer = 120;
+      }
+    }
+  </script>
+</body>
+</html>
