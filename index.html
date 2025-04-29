@@ -62,36 +62,60 @@
     let eliminatedWords = 0;
     let inputBuffer = '';
     let inputDisplay = '';
+    let errorTimer = 0;
     
-    // 後備倉頡碼資料庫
-    let cangjieDB = [
-      { char: '日', code: 'A', level: 1 },
-      { char: '月', code: 'B', level: 1 },
-      { char: '口', code: 'R', level: 1 },
-      { char: '由', code: 'HW', level: 2 },
-      { char: '田', code: 'W', level: 2 },
-      { char: '白', code: 'HA', level: 2 },
-      { char: '丹', code: 'MY', level: 3 },
-      { char: '舟', code: 'HY', level: 3 },
-      { char: '好', code: 'VND', level: 4 },
-      { char: '明', code: 'AB', level: 4 },
-      { char: '電', code: 'MFB', level: 6 },
-      { char: '機', code: 'MGRR', level: 8 }
+    // 硬編碼倉頡碼資料庫（50 個字）
+    const cangjieDB = [
+      {"char": "日", "code": "A", "level": 1},
+      {"char": "月", "code": "B", "level": 1},
+      {"char": "金", "code": "C", "level": 1},
+      {"char": "木", "code": "D", "level": 1},
+      {"char": "水", "code": "E", "level": 1},
+      {"char": "火", "code": "F", "level": 1},
+      {"char": "土", "code": "G", "level": 1},
+      {"char": "竹", "code": "H", "level": 1},
+      {"char": "戈", "code": "I", "level": 1},
+      {"char": "十", "code": "J", "level": 1},
+      {"char": "由", "code": "HW", "level": 2},
+      {"char": "甲", "code": "WJ", "level": 2},
+      {"char": "申", "code": "LWL", "level": 2},
+      {"char": "田", "code": "W", "level": 2},
+      {"char": "白", "code": "HA", "level": 2},
+      {"char": "目", "code": "BU", "level": 2},
+      {"char": "石", "code": "MR", "level": 2},
+      {"char": "示", "code": "MF", "level": 2},
+      {"char": "禾", "code": "HD", "level": 2},
+      {"char": "穴", "code": "JC", "level": 2},
+      {"char": "丹", "code": "MY", "level": 3},
+      {"char": "舟", "code": "HY", "level": 3},
+      {"char": "虫", "code": "LI", "level": 3},
+      {"char": "血", "code": "HT", dedicata 3},
+      {"char": "行", "code": "HLL", "level": 3},
+      {"char": "衣", "code": "YV", "level": 3},
+      {"char": "言", "code": "IV", "level": 3},
+      {"char": "谷", "code": "CRO", "level": 3},
+      {"char": "豆", "code": "MT", "level": 3},
+      {"char": "豕", "code": "MO", "level": 3},
+      {"char": "好", "code": "VND", "level": 4},
+      {"char": "明", "code": "AB", "level": 4},
+      {"char": "星", "code": "AP", "level": 4},
+      {"char": "早", "code": "AJ", "level": 4},
+      {"char": "虫", "code": "LMI", "level": 4},
+      {"char": "里", "code": "WGG", "level": 5},
+      {"char": "吳", "code": "RML", "level": 5},
+      {"char": "店", "code": "YTD", "level": 5},
+      {"char": "占", "code": "YR", "level": 5},
+      {"char": "足", "code": "RHY", "level": 5},
+      {"char": "電", "code": "MFB", "level": 6},
+      {"char": "男", "code": "WKS", "level": 6},
+      {"char": "畫", "code": "LWGT", "level": 7},
+      {"char": "異", "code": "WTC", "level": 7},
+      {"char": "機", "code": "MGRR", "level": 8},
+      {"char": "腦", "code": "YTBU", "level": 9},
+      {"char": "贏", "code": "YRLH", "level": 9},
+      {"char": "靈", "code": "FFBM", "level": 10},
+      {"char": "廳", "code": "JTMN", "level": 10}
     ];
-    
-    // 載入 cangjie.json
-    fetch('cangjie.json')
-      .then(response => {
-        if (!response.ok) throw new Error('cangjie.json not found');
-        return response.json();
-      })
-      .then(data => {
-        cangjieDB = data;
-        console.log('Cangjie DB loaded:', cangjieDB.length, 'entries');
-      })
-      .catch(error => {
-        console.warn('Failed to load cangjie.json, using fallback DB:', error);
-      });
     
     function setup() {
       let canvas = createCanvas(600, 800);
@@ -146,6 +170,7 @@
       eliminatedWords = 0;
       inputBuffer = '';
       inputDisplay = '';
+      errorTimer = 0;
       select('#start-screen').remove();
       gameState = 'playing';
       spawnWord();
@@ -179,6 +204,13 @@
       textSize(20);
       text(`分數: ${score} 關卡: ${level} 輸入: ${inputDisplay}`, width / 2, height - 30);
       
+      // 錯誤提示（持續顯示 1 秒）
+      if (errorTimer > 0) {
+        fill(255, 0, 0);
+        text("輸入錯誤！", width / 2, height / 2);
+        errorTimer--;
+      }
+      
       if (frameCount % (180 / speed) === 0) {
         spawnWord();
       }
@@ -201,6 +233,7 @@
         y: 40,
         isStatic: false
       });
+      console.log('Spawned word:', word.char, word.code); // 除錯：記錄生成的文字
     }
     
     function drawGameOverScreen() {
@@ -245,9 +278,9 @@
       if (word) {
         inputDisplay = word.char; // 顯示完整中文字
       } else {
-        // 若部分輸入，顯示原始字母
-        inputDisplay = inputBuffer;
+        inputDisplay = inputBuffer; // 顯示原始字母
       }
+      console.log('Input:', inputBuffer, 'Display:', inputDisplay); // 除錯：記錄輸入和顯示
     }
     
     function checkInput() {
@@ -260,22 +293,28 @@
         }
       }
       
-      if (lowestWord && inputBuffer === lowestWord.code) {
-        words.splice(words.indexOf(lowestWord), 1);
-        score += 100;
-        eliminatedWords++;
-        inputBuffer = '';
-        inputDisplay = '';
-        
-        if (eliminatedWords >= 10) {
-          level = Math.min(level + 1, 10);
-          eliminatedWords = 0;
+      if (lowestWord) {
+        console.log('Check input:', inputBuffer, 'Expected:', lowestWord.code); // 除錯：記錄比較
+        if (inputBuffer === lowestWord.code) {
+          words.splice(words.indexOf(lowestWord), 1);
+          score += 100;
+          eliminatedWords++;
+          inputBuffer = '';
+          inputDisplay = '';
+          
+          if (eliminatedWords >= 10) {
+            level = Math.min(level + 1, 10);
+            eliminatedWords = 0;
+          }
+        } else {
+          inputBuffer = '';
+          inputDisplay = '';
+          errorTimer = 60; // 顯示錯誤 1 秒
         }
       } else {
         inputBuffer = '';
         inputDisplay = '';
-        fill(255, 0, 0);
-        text("輸入錯誤！", width / 2, height / 2);
+        errorTimer = 60; // 無可消除文字時也顯示錯誤
       }
     }
   </script>
