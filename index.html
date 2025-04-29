@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>倉頡方塊</title>
-  <!-- p5.js CDN 與本地後備 -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js" onerror="console.error('p5.js CDN failed to load'); document.body.innerHTML = '<h1>錯誤：無法加載 p5.js，請檢查網絡或稍後重試</h1>'"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js" onerror="console.error('p5.js CDN failed'); document.body.innerHTML = '<h1>錯誤：無法加載 p5.js，請檢查網絡或稍後重試</h1>'"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/addons/p5.sound.min.js"></script>
   <style>
     body {
       display: flex;
@@ -58,14 +58,17 @@
     let gameState = 'start';
     let speed, difficulty, fallSpeed;
     let words = [];
+    let particles = [];
     let score = 0;
     let level = 1;
     let eliminatedWords = 0;
     let inputBuffer = '';
     let inputDisplay = '';
     let errorTimer = 0;
+    let levelUpTimer = 0;
+    let hitSound, levelUpSound;
 
-    // 硬編碼倉頡碼資料庫（50 個字，修正拼寫錯誤）
+    // 硬編碼倉頡碼資料庫（49 個字）
     const cangjieDB = [
       {"char": "日", "code": "A", "level": 1},
       {"char": "月", "code": "B", "level": 1},
@@ -117,6 +120,16 @@
       {"char": "廳", "code": "JTMN", "level": 10}
     ];
 
+    function preload() {
+      try {
+        // 需上傳 hit.mp3 和 levelup.mp3 到儲存庫根目錄
+        hitSound = loadSound('hit.mp3');
+        levelUpSound = loadSound('levelup.mp3');
+      } catch (e) {
+        console.warn('Sound loading failed:', e);
+      }
+    }
+
     function setup() {
       try {
         let canvas = createCanvas(600, 800);
@@ -126,13 +139,17 @@
         console.log('Setup complete: Canvas initialized');
       } catch (e) {
         console.error('Setup failed:', e);
-        document.body.innerHTML = '<h1>錯誤：遊戲初始化失敗，請檢查 Console 或聯繫開發者</h1>';
+        document.body.innerHTML = '<h1>錯誤：遊戲初始化失敗，請檢查 Console</h1>';
       }
     }
 
     function draw() {
       try {
-        background(220);
+        // 背景色隨關卡變化（HSL）
+        let hue = (level * 30) % 360;
+        background(`hsl(${hue}, 50%, 90%)`);
+        drawGrid(); // 俄羅斯方塊網格
+
         if (gameState === 'start') {
           drawStartScreen();
         } else if (gameState === 'playing') {
@@ -140,10 +157,23 @@
         } else if (gameState === 'gameOver') {
           drawGameOverScreen();
         }
-        console.log(`Draw called: gameState = ${gameState}`);
+        drawParticles();
+        console.log(`Draw called: gameState = ${gameState}, Level = ${level}`);
       } catch (e) {
         console.error('Draw failed:', e);
       }
+    }
+
+    function drawGrid() {
+      stroke(200);
+      strokeWeight(1);
+      for (let x = 0; x < width; x += 40) {
+        line(x, 0, x, height);
+      }
+      for (let y = 0; y < height; y += 40) {
+        line(0, y, width, y);
+      }
+      noStroke();
     }
 
     function drawStartScreen() {
@@ -152,7 +182,7 @@
         startDiv = createDiv().id('start-screen');
         startDiv.html(`
           <h1>倉頡方塊</h1>
-          <p>選擇遊戲速度和難度，輸入倉頡碼並按空格鍵消除跌落文字！</p>
+          <p>輸入倉頡碼並按空格鍵消除跌落文字！</p>
           <label>速度：</label>
           <select id="speed-select">
             <option value="1">慢速</option>
@@ -177,12 +207,14 @@
         difficulty = parseInt(select('#difficulty-select').value());
         fallSpeed = speed * 2;
         words = [];
+        particles = [];
         score = 0;
         level = 1;
         eliminatedWords = 0;
         inputBuffer = '';
         inputDisplay = '';
         errorTimer = 0;
+        levelUpTimer = 0;
         select('#start-screen').remove();
         gameState = 'playing';
         spawnWord();
@@ -193,13 +225,11 @@
     }
 
     function drawGame() {
-      fill(255);
-      rect(0, 0, width, height);
-
+      // 繪製文字（隨機顏色）
       for (let i = words.length - 1; i >= 0; i--) {
         let word = words[i];
         if (!word.isStatic) {
-          word.y += fallSpeed / frameRate();
+          word.y = lerp(word.y, word.y + fallSpeed / frameRate(), 0.1); // 平滑跌落
         }
         if (word.y >= height - 40 && !word.isStatic) {
           word.isStatic = true;
@@ -208,7 +238,7 @@
         if (word.y <= 40 && word.isStatic) {
           gameState = 'gameOver';
         }
-        fill(word.isStatic ? 100 : 0);
+        fill(word.color || color(random(100, 255), random(100, 255), random(100, 255)));
         text(word.char, word.x, word.y);
       }
 
@@ -217,11 +247,19 @@
       textSize(20);
       text(`分數: ${score} 關卡: ${level} 輸入: ${inputDisplay}`, width / 2, height - 30);
 
-      // 錯誤提示（2 秒）
+      // 錯誤提示
       if (errorTimer > 0) {
         fill(255, 0, 0);
         text("輸入錯誤！", width / 2, height / 2);
         errorTimer--;
+      }
+
+      // 關卡提升動畫
+      if (levelUpTimer > 0) {
+        fill(255, 215, 0);
+        textSize(40);
+        text("Level Up!", width / 2, height / 2 - 50);
+        levelUpTimer--;
       }
 
       if (frameCount % (180 / speed) === 0) {
@@ -244,9 +282,38 @@
         code: word.code,
         x: random(50, width - 50),
         y: 40,
-        isStatic: false
+        isStatic: false,
+        color: color(random(100, 255), random(100, 255), random(100, 255))
       });
       console.log(`Spawned word: ${word.char} (${word.code}), Level: ${level}`);
+    }
+
+    function drawParticles() {
+      for (let i = particles.length - 1; i >= 0; i--) {
+        let p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.alpha -= 5;
+        if (p.alpha <= 0) {
+          particles.splice(i, 1);
+          continue;
+        }
+        fill(p.color.levels[0], p.color.levels[1], p.color.levels[2], p.alpha);
+        ellipse(p.x, p.y, 5);
+      }
+    }
+
+    function createParticles(x, y, color) {
+      for (let i = 0; i < 20; i++) {
+        particles.push({
+          x: x,
+          y: y,
+          vx: random(-2, 2),
+          vy: random(-2, 2),
+          alpha: 255,
+          color: color
+        });
+      }
     }
 
     function drawGameOverScreen() {
@@ -305,6 +372,8 @@
       if (lowestWord) {
         console.log(`Check input: ${inputBuffer}, Expected: ${lowestWord.code}, Word: ${lowestWord.char}`);
         if (inputBuffer === lowestWord.code) {
+          createParticles(lowestWord.x, lowestWord.y, lowestWord.color);
+          if (hitSound) hitSound.play();
           words.splice(words.indexOf(lowestWord), 1);
           score += 100;
           eliminatedWords++;
@@ -313,6 +382,10 @@
           if (eliminatedWords >= 10) {
             level = Math.min(level + 1, 10);
             eliminatedWords = 0;
+            levelUpTimer = 120; // 2 秒動畫
+            fallSpeed = speed * 2 * (1 + 0.1 * level); // 速度遞增
+            if (levelUpSound) levelUpSound.play();
+            console.log(`Level up: ${level}, New fallSpeed: ${fallSpeed}`);
           }
           console.log(`Word eliminated: ${lowestWord.char}, Score: ${score}, Level: ${level}`);
         } else {
