@@ -64,7 +64,7 @@
     let inputDisplay = '';
     let errorTimer = 0;
     
-    // 硬編碼倉頡碼資料庫（50 個字）
+    // 硬編碼倉頡碼資料庫（50 個字，修正拼寫錯誤）
     const cangjieDB = [
       {"char": "日", "code": "A", "level": 1},
       {"char": "月", "code": "B", "level": 1},
@@ -89,7 +89,7 @@
       {"char": "丹", "code": "MY", "level": 3},
       {"char": "舟", "code": "HY", "level": 3},
       {"char": "虫", "code": "LI", "level": 3},
-      {"char": "血", "code": "HT", dedicata 3},
+      {"char": "血", "code": "HT", "level": 3},
       {"char": "行", "code": "HLL", "level": 3},
       {"char": "衣", "code": "YV", "level": 3},
       {"char": "言", "code": "IV", "level": 3},
@@ -100,7 +100,7 @@
       {"char": "明", "code": "AB", "level": 4},
       {"char": "星", "code": "AP", "level": 4},
       {"char": "早", "code": "AJ", "level": 4},
-      {"char": "虫", "code": "LMI", "level": 4},
+      BZ{"char": "虫", "code": "LMI", "level": 4},
       {"char": "里", "code": "WGG", "level": 5},
       {"char": "吳", "code": "RML", "level": 5},
       {"char": "店", "code": "YTD", "level": 5},
@@ -191,132 +191,4 @@
           spawnWord();
         }
         
-        if (word.y <= 40 && word.isStatic) {
-          gameState = 'gameOver';
-        }
-        
-        fill(word.isStatic ? 100 : 0);
-        text(word.char, word.x, word.y);
-      }
-      
-      // 顯示分數、關卡和輸入文字（底部）
-      fill(0);
-      textSize(20);
-      text(`分數: ${score} 關卡: ${level} 輸入: ${inputDisplay}`, width / 2, height - 30);
-      
-      // 錯誤提示（持續顯示 1 秒）
-      if (errorTimer > 0) {
-        fill(255, 0, 0);
-        text("輸入錯誤！", width / 2, height / 2);
-        errorTimer--;
-      }
-      
-      if (frameCount % (180 / speed) === 0) {
-        spawnWord();
-      }
-    }
-    
-    function spawnWord() {
-      let maxLevel = difficulty === 1 ? 3 : (difficulty === 5 ? 7 : 10);
-      let availableWords = cangjieDB.filter(w => w.level === level && w.level <= maxLevel);
-      if (availableWords.length === 0) {
-        availableWords = cangjieDB.filter(w => w.level <= maxLevel);
-      }
-      if (availableWords.length === 0) {
-        availableWords = cangjieDB;
-      }
-      let word = random(availableWords);
-      words.push({
-        char: word.char,
-        code: word.code,
-        x: random(50, width - 50),
-        y: 40,
-        isStatic: false
-      });
-      console.log('Spawned word:', word.char, word.code); // 除錯：記錄生成的文字
-    }
-    
-    function drawGameOverScreen() {
-      let gameOverDiv = select('#game-over-screen');
-      if (!gameOverDiv) {
-        gameOverDiv = createDiv().id('game-over-screen');
-        gameOverDiv.html(`
-          <h1>遊戲結束</h1>
-          <p>最終分數: ${score}</p>
-          <p>最終關卡: ${level}</p>
-          <button onclick="restartGame()">重新開始</button>
-        `);
-      }
-    }
-    
-    function restartGame() {
-      select('#game-over-screen').remove();
-      gameState = 'start';
-    }
-    
-    function keyPressed() {
-      if (gameState === 'playing') {
-        if (keyCode === BACKSPACE) {
-          inputBuffer = inputBuffer.slice(0, -1);
-          updateInputDisplay();
-        } else if (keyCode === 32) { // Space 鍵
-          checkInput();
-        }
-      }
-    }
-    
-    function keyTyped() {
-      if (gameState === 'playing' && key.match(/[a-z]/i)) {
-        inputBuffer += key.toUpperCase();
-        updateInputDisplay();
-      }
-    }
-    
-    function updateInputDisplay() {
-      // 檢查完整輸入是否匹配倉頡碼
-      let word = cangjieDB.find(w => w.code === inputBuffer);
-      if (word) {
-        inputDisplay = word.char; // 顯示完整中文字
-      } else {
-        inputDisplay = inputBuffer; // 顯示原始字母
-      }
-      console.log('Input:', inputBuffer, 'Display:', inputDisplay); // 除錯：記錄輸入和顯示
-    }
-    
-    function checkInput() {
-      let lowestWord = null;
-      let minY = -Infinity;
-      for (let word of words) {
-        if (!word.isStatic && word.y > minY) {
-          lowestWord = word;
-          minY = word.y;
-        }
-      }
-      
-      if (lowestWord) {
-        console.log('Check input:', inputBuffer, 'Expected:', lowestWord.code); // 除錯：記錄比較
-        if (inputBuffer === lowestWord.code) {
-          words.splice(words.indexOf(lowestWord), 1);
-          score += 100;
-          eliminatedWords++;
-          inputBuffer = '';
-          inputDisplay = '';
-          
-          if (eliminatedWords >= 10) {
-            level = Math.min(level + 1, 10);
-            eliminatedWords = 0;
-          }
-        } else {
-          inputBuffer = '';
-          inputDisplay = '';
-          errorTimer = 60; // 顯示錯誤 1 秒
-        }
-      } else {
-        inputBuffer = '';
-        inputDisplay = '';
-        errorTimer = 60; // 無可消除文字時也顯示錯誤
-      }
-    }
-  </script>
-</body>
-</html>
+        if (word.y <=
