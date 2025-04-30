@@ -262,6 +262,17 @@
     }
 
     function spawnWord() {
+      // 限制最多 5 個跌落文字
+      if (words.length >= 5) {
+        console.log('Max words reached, skipping spawn');
+        return;
+      }
+      // 檢查現有文字位置，確保間距
+      let minY = Math.min(...words.map(w => w.y).concat([height]));
+      if (minY < 120) {
+        console.log('Words too close, skipping spawn');
+        return;
+      }
       let maxLevel = difficulty === 1 ? 3 : (difficulty === 5 ? 7 : 10);
       let availableWords = cangjieDB.filter(w => w.level <= level && w.level <= maxLevel);
       if (availableWords.length === 0) {
@@ -281,7 +292,9 @@
         isStatic: false,
         color: color(random(100, 255), random(100, 255), random(100, 255))
       });
-      console.log(`Spawned word: ${word.char} (${code}), Level: ${level}`);
+      // 每次生成新文字，增加跌落速度
+      fallSpeed *= 1.1;
+      console.log(`Spawned word: ${word.char} (${code}), Level: ${level}, fallSpeed: ${fallSpeed}`);
     }
 
     function drawParticles() {
@@ -360,47 +373,35 @@
     }
 
     function checkInput() {
-      let lowestWord = null;
-      let minY = -Infinity;
-      for (let word of words) {
-        if (!word.isStatic && word.y > minY) {
-          lowestWord = word;
-          minY = word.y;
-        }
-      }
-      if (!lowestWord) {
-        console.log('No non-static word available, showing error');
-        inputBuffer = '';
-        inputDisplay = '';
-        errorTimer = 120;
-        return;
-      }
       let input = inputBuffer.trim().toUpperCase().replace(/[^A-Z]/g, '');
-      let expected = lowestWord.code.trim().toUpperCase().replace(/[^A-Z]/g, '');
-      console.log(`Check input: "${input}", Expected: "${expected}", Word: ${lowestWord.char}, ASCII: [${input.split('').map(c => c.charCodeAt(0))}] vs [${expected.split('').map(c => c.charCodeAt(0))}]`);
-      if (input === expected) {
-        createParticles(lowestWord.x, lowestWord.y, lowestWord.color);
-        if (hitSound) hitSound.play();
-        words.splice(words.indexOf(lowestWord), 1);
-        score += 100;
-        eliminatedWords++;
-        inputBuffer = '';
-        inputDisplay = '';
-        if (eliminatedWords >= 10) {
-          level = Math.min(level + 1, 10);
-          eliminatedWords = 0;
-          levelUpTimer = 120;
-          fallSpeed = speed * 2 * (1 + 0.1 * level);
-          if (levelUpSound) levelUpSound.play();
-          console.log(`Level up: ${level}, New fallSpeed: ${fallSpeed}`);
+      console.log(`Check input: "${input}"`);
+      for (let i = words.length - 1; i >= 0; i--) {
+        let word = words[i];
+        if (!word.isStatic && word.code.trim().toUpperCase().replace(/[^A-Z]/g, '') === input) {
+          console.log(`Match found: Word: ${word.char}, Code: ${word.code}, ASCII: [${input.split('').map(c => c.charCodeAt(0))}]`);
+          createParticles(word.x, word.y, word.color);
+          if (hitSound) hitSound.play();
+          words.splice(i, 1);
+          score += 100;
+          eliminatedWords++;
+          inputBuffer = '';
+          inputDisplay = '';
+          if (eliminatedWords >= 10) {
+            level = Math.min(level + 1, 10);
+            eliminatedWords = 0;
+            levelUpTimer = 120;
+            fallSpeed = speed * 2 * (1 + 0.1 * level);
+            if (levelUpSound) levelUpSound.play();
+            console.log(`Level up: ${level}, New fallSpeed: ${fallSpeed}`);
+          }
+          console.log(`Word eliminated: ${word.char}, Score: ${score}, Level: ${level}`);
+          return;
         }
-        console.log(`Word eliminated: ${lowestWord.char}, Score: ${score}, Level: ${level}`);
-      } else {
-        console.log(`Input mismatch: "${input}" != "${expected}"`);
-        inputBuffer = '';
-        inputDisplay = '';
-        errorTimer = 120;
       }
+      console.log(`No match for input: "${input}"`);
+      inputBuffer = '';
+      inputDisplay = '';
+      errorTimer = 120;
     }
   </script>
 </body>
