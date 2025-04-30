@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>倉頡方塊</title>
+  <!-- 防止 favicon.ico 404 -->
+  <link rel="icon" href="data:;base64,iVBORw0KGgo=">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js" onerror="console.error('p5.js CDN failed'); document.body.innerHTML = '<h1>錯誤：無法加載 p5.js，請檢查網絡或稍後重試</h1>'"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/addons/p5.sound.min.js"></script>
   <style>
@@ -122,7 +124,7 @@
 
     function preload() {
       try {
-        // 需上傳 hit.mp3 和 levelup.mp3 到儲存庫
+        // 需上傳 hit.mp3 和 levelup.mp3
         hitSound = loadSound('hit.mp3');
         levelUpSound = loadSound('levelup.mp3');
       } catch (e) {
@@ -145,7 +147,6 @@
 
     function draw() {
       try {
-        // 背景色隨關卡變化
         let hue = (level * 30) % 360;
         background(`hsl(${hue}, 50%, 90%)`);
         drawGrid();
@@ -270,15 +271,20 @@
         availableWords = cangjieDB;
       }
       let word = random(availableWords);
+      let code = word.code.trim().toUpperCase();
+      if (!cangjieDB.some(w => w.code.trim().toUpperCase() === code)) {
+        console.error(`Invalid word spawned: ${word.char} (${code})`);
+        return;
+      }
       words.push({
         char: word.char,
-        code: word.code.trim().toUpperCase(), // 確保碼一致
+        code: code,
         x: random(50, width - 50),
         y: 40,
         isStatic: false,
         color: color(random(100, 255), random(100, 255), random(100, 255))
       });
-      console.log(`Spawned word: ${word.char} (${word.code}), Level: ${level}`);
+      console.log(`Spawned word: ${word.char} (${code}), Level: ${level}`);
     }
 
     function drawParticles() {
@@ -348,7 +354,7 @@
     }
 
     function updateInputDisplay() {
-      inputBuffer = inputBuffer.trim().toUpperCase();
+      inputBuffer = inputBuffer.trim().toUpperCase().replace(/[^A-Z]/g, '');
       let word = cangjieDB.find(w => w.code.trim().toUpperCase() === inputBuffer);
       inputDisplay = word ? word.char : inputBuffer;
       console.log(`Input: "${inputBuffer}", Display: "${inputDisplay}"`);
@@ -357,52 +363,41 @@
     function checkInput() {
       let lowestWord = null;
       let minY = -Infinity;
-      // 優先選非靜止文字
       for (let word of words) {
         if (!word.isStatic && word.y > minY) {
           lowestWord = word;
           minY = word.y;
         }
       }
-      // 若無非靜止文字，選靜止文字
       if (!lowestWord) {
-        minY = -Infinity;
-        for (let word of words) {
-          if (word.y > minY) {
-            lowestWord = word;
-            minY = word.y;
-          }
-        }
+        console.log('No non-static word available, skipping check');
+        inputBuffer = '';
+        inputDisplay = '';
+        errorTimer = 120;
+        return;
       }
-      if (lowestWord) {
-        let input = inputBuffer.trim().toUpperCase();
-        let expected = lowestWord.code.trim().toUpperCase();
-        console.log(`Check input: "${input}", Expected: "${expected}", Word: ${lowestWord.char}`);
-        if (input === expected) {
-          createParticles(lowestWord.x, lowestWord.y, lowestWord.color);
-          if (hitSound) hitSound.play();
-          words.splice(words.indexOf(lowestWord), 1);
-          score += 100;
-          eliminatedWords++;
-          inputBuffer = '';
-          inputDisplay = '';
-          if (eliminatedWords >= 10) {
-            level = Math.min(level + 1, 10);
-            eliminatedWords = 0;
-            levelUpTimer = 120;
-            fallSpeed = speed * 2 * (1 + 0.1 * level);
-            if (levelUpSound) levelUpSound.play();
-            console.log(`Level up: ${level}, New fallSpeed: ${fallSpeed}`);
-          }
-          console.log(`Word eliminated: ${lowestWord.char}, Score: ${score}, Level: ${level}`);
-        } else {
-          console.log(`Input mismatch: "${input}" != "${expected}"`);
-          inputBuffer = '';
-          inputDisplay = '';
-          errorTimer = 120;
+      let input = inputBuffer.trim().toUpperCase().replace(/[^A-Z]/g, '');
+      let expected = lowestWord.code.trim().toUpperCase().replace(/[^A-Z]/g, '');
+      console.log(`Check input: "${input}", Expected: "${expected}", Word: ${lowestWord.char}, ASCII: [${input.split('').map(c => c.charCodeAt(0))}] vs [${expected.split('').map(c => c.charCodeAt(0))}]`);
+      if (input === expected) {
+        createParticles(lowestWord.x, lowestWord.y, lowestWord.color);
+        if (hitSound) hitSound.play();
+        words.splice(words.indexOf(lowestWord), 1);
+        score += 100;
+        eliminatedWords++;
+        inputBuffer = '';
+        inputDisplay = '';
+        if (eliminatedWords >= 10) {
+          level = Math.min(level + 1, 10);
+          eliminatedWords = 0;
+          levelUpTimer = 120;
+          fallSpeed = speed * 2 * (1 + 0.1 * level);
+          if (levelUpSound) levelUpSound.play();
+          console.log(`Level up: ${level}, New fallSpeed: ${fallSpeed}`);
         }
+        console.log(`Word eliminated: ${lowestWord.char}, Score: ${score}, Level: ${level}`);
       } else {
-        console.log('No word available to check');
+        console.log(`Input mismatch: "${input}" != "${expected}"`);
         inputBuffer = '';
         inputDisplay = '';
         errorTimer = 120;
