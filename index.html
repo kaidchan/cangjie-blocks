@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>倉頡方塊</title>
-  <!-- 防止 favicon.ico 404 -->
   <link rel="icon" href="data:;base64,iVBORw0KGgo=">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js" onerror="console.error('p5.js CDN failed'); document.body.innerHTML = '<h1>錯誤：無法加載 p5.js，請檢查網絡或稍後重試</h1>'"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/addons/p5.sound.min.js"></script>
@@ -70,7 +69,6 @@
     let levelUpTimer = 0;
     let hitSound, levelUpSound;
 
-    // 硬編碼倉頡碼資料庫（49 個字）
     const cangjieDB = [
       {"char": "日", "code": "A", "level": 1},
       {"char": "月", "code": "B", "level": 1},
@@ -124,7 +122,6 @@
 
     function preload() {
       try {
-        // 需上傳 hit.mp3 和 levelup.mp3
         hitSound = loadSound('hit.mp3');
         levelUpSound = loadSound('levelup.mp3');
       } catch (e) {
@@ -316,10 +313,10 @@
     }
 
     function drawGameOverScreen() {
-      let gameOverDiv = select('#game-over-screen');
-      if (!gameOverDiv) {
-        gameOverDiv = createDiv().id('game-over-screen');
-        gameOverDiv.html(`
+      let startDiv = select('#game-over-screen');
+      if (!startDiv) {
+        startDiv = createDiv().id('game-over-screen');
+        startDiv.html(`
           <h1>遊戲結束</h1>
           <p>最終分數: ${score}</p>
           <p>最終關卡: ${level}</p>
@@ -340,7 +337,9 @@
         if (keyCode === BACKSPACE) {
           inputBuffer = inputBuffer.slice(0, -1);
           updateInputDisplay();
+          console.log('Backspace pressed');
         } else if (keyCode === 32) {
+          console.log('Spacebar pressed, checking input');
           checkInput();
         }
       }
@@ -370,7 +369,7 @@
         }
       }
       if (!lowestWord) {
-        console.log('No non-static word available, skipping check');
+        console.log('No non-static word available, showing error');
         inputBuffer = '';
         inputDisplay = '';
         errorTimer = 120;
