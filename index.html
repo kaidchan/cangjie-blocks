@@ -164,9 +164,10 @@
           drawGameOverScreen();
         }
         drawParticles();
-        console.log(`Draw called: gameState = ${gameState}, Level = ${level}`);
+        console.log(`Draw called: gameState = ${gameState}, Level = ${level}, Words = ${words.length}`);
       } catch (e) {
         console.error('Draw failed:', e);
+        document.body.innerHTML = '<h1>錯誤：繪製失敗，請檢查 Console</h1>';
       }
     }
 
@@ -211,7 +212,7 @@
       try {
         speed = parseInt(select('#speed-select').value());
         difficulty = parseInt(select('#difficulty-select').value());
-        fallSpeed = speed * 4; // 速度加快 1 倍
+        fallSpeed = speed * 4;
         words = [];
         particles = [];
         score = 0;
@@ -223,10 +224,11 @@
         levelUpTimer = 0;
         select('#start-screen').remove();
         gameState = 'playing';
-        spawnWord(); // 立即生成第一個文字
+        spawnWord(); // 立即生成
         console.log(`Game started: speed=${speed}, difficulty=${difficulty}, fallSpeed=${fallSpeed}`);
       } catch (e) {
         console.error('Start game failed:', e);
+        document.body.innerHTML = '<h1>錯誤：遊戲啟動失敗，請檢查 Console</h1>';
       }
     }
 
@@ -266,24 +268,34 @@
         levelUpTimer--;
       }
 
-      if (frameCount % (120 / speed) === 0) { // 縮短生成間隔
+      // 前 3 秒每秒生成，之後每 60/speed 幀
+      if (frameCount < 180 || frameCount % (60 / speed) === 0) {
         spawnWord();
       }
+      console.log(`drawGame called: frameCount=${frameCount}, words=${words.length}`);
     }
 
     function spawnWord() {
-      // 放寬限制，確保初始文字生成
-      let minY = words.length === 0 ? height : Math.min(...words.map(w => w.y));
-      if (words.length >= 5 || minY < 80) {
-        console.log(`Spawn skipped: ${words.length >= 5 ? 'Max words reached' : 'Words too close'}, minY=${minY}`);
+      // 初始生成無限制
+      if (words.length >= 5) {
+        console.log(`Spawn skipped: Max words reached, words=${words.length}`);
         return;
       }
+      // 非初始時檢查間距
+      if (words.length > 0) {
+        let minY = Math.min(...words.map(w => w.y));
+        if (minY < 80) {
+          console.log(`Spawn skipped: Words too close, minY=${minY}`);
+          return;
+        }
+      }
       let maxLevel = difficulty === 1 ? 3 : (difficulty === 5 ? 7 : 10);
-      let availableWords = cangjieDB.filter(w => w.level <= level && w.level <= maxLevel);
+      let availableWords = cangjieDB.filter(w => w.level <= maxLevel);
       if (availableWords.length === 0) {
         console.warn('No available words, using all cangjieDB');
         availableWords = cangjieDB;
       }
+      console.log(`Available words: ${availableWords.length}, maxLevel=${maxLevel}`);
       let word = random(availableWords);
       let code = word.code.trim().toUpperCase();
       if (!cangjieDB.some(w => w.code.trim().toUpperCase() === code)) {
@@ -299,7 +311,7 @@
         color: random(colorPalette)
       });
       fallSpeed *= 1.1;
-      console.log(`Spawned word: ${word.char} (${code}), Level: ${level}, fallSpeed: ${fallSpeed}`);
+      console.log(`Spawned word: ${word.char} (${code}), Level: ${level}, fallSpeed: ${fallSpeed}, Words: ${words.length}`);
     }
 
     function drawParticles() {
@@ -395,7 +407,7 @@
             level = Math.min(level + 1, 10);
             eliminatedWords = 0;
             levelUpTimer = 120;
-            fallSpeed = speed * 4 * (1 + 0.1 * level); // 速度加快 1 倍
+            fallSpeed = speed * 4 * (1 + 0.1 * level);
             if (levelUpSound) levelUpSound.play();
             console.log(`Level up: ${level}, New fallSpeed: ${fallSpeed}`);
           }
