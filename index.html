@@ -69,6 +69,15 @@
     let levelUpTimer = 0;
     let hitSound, levelUpSound;
 
+    // 深色調色盤
+    const colorPalette = [
+      color(50, 50, 100), // 深藍
+      color(100, 50, 50), // 深紅
+      color(50, 100, 50), // 深綠
+      color(100, 100, 50), // 深黃
+      color(100, 50, 100) // 深紫
+    ];
+
     const cangjieDB = [
       {"char": "日", "code": "A", "level": 1},
       {"char": "月", "code": "B", "level": 1},
@@ -134,7 +143,7 @@
         let canvas = createCanvas(600, 800);
         canvas.parent('game-container');
         textAlign(CENTER, CENTER);
-        textSize(32);
+        textSize(64); // 跌落文字和輸入顯示放大
         console.log('Setup complete: Canvas initialized');
       } catch (e) {
         console.error('Setup failed:', e);
@@ -235,23 +244,25 @@
         if (word.y <= 40 && word.isStatic) {
           gameState = 'gameOver';
         }
-        fill(word.color || color(random(100, 255), random(100, 255), random(100, 255)));
+        fill(word.color);
+        textSize(64); // 跌落文字放大
         text(word.char, word.x, word.y);
       }
 
       fill(0);
-      textSize(20);
+      textSize(40); // 分數和輸入顯示放大
       text(`分數: ${score} 關卡: ${level} 輸入: ${inputDisplay}`, width / 2, height - 30);
 
       if (errorTimer > 0) {
         fill(255, 0, 0);
+        textSize(64); // 錯誤訊息放大
         text("輸入錯誤！", width / 2, height / 2);
         errorTimer--;
       }
 
       if (levelUpTimer > 0) {
         fill(255, 215, 0);
-        textSize(40);
+        textSize(80); // Level Up 放大
         text("Level Up!", width / 2, height / 2 - 50);
         levelUpTimer--;
       }
@@ -262,12 +273,10 @@
     }
 
     function spawnWord() {
-      // 限制最多 5 個跌落文字
       if (words.length >= 5) {
         console.log('Max words reached, skipping spawn');
         return;
       }
-      // 檢查現有文字位置，確保間距
       let minY = Math.min(...words.map(w => w.y).concat([height]));
       if (minY < 120) {
         console.log('Words too close, skipping spawn');
@@ -290,9 +299,8 @@
         x: random(50, width - 50),
         y: 40,
         isStatic: false,
-        color: color(random(100, 255), random(100, 255), random(100, 255))
+        color: random(colorPalette) // 使用深色調色盤
       });
-      // 每次生成新文字，增加跌落速度
       fallSpeed *= 1.1;
       console.log(`Spawned word: ${word.char} (${code}), Level: ${level}, fallSpeed: ${fallSpeed}`);
     }
@@ -369,7 +377,7 @@
       inputBuffer = inputBuffer.trim().toUpperCase().replace(/[^A-Z]/g, '');
       let word = cangjieDB.find(w => w.code.trim().toUpperCase() === inputBuffer);
       inputDisplay = word ? word.char : inputBuffer;
-      console.log(`Input: "${inputBuffer}", Display: "${inputDisplay}"`);
+      console.log(`Input: "${inputBuffer}", Display: "${inputDisplay}"${word ? `, Matched: ${word.char} (${word.code})` : ', No word found'}`);
     }
 
     function checkInput() {
