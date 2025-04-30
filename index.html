@@ -69,7 +69,6 @@
     let levelUpTimer = 0;
     let hitSound, levelUpSound;
 
-    // 深色調色盤
     const colorPalette = [
       color(50, 50, 100), // 深藍
       color(100, 50, 50), // 深紅
@@ -143,7 +142,7 @@
         let canvas = createCanvas(600, 800);
         canvas.parent('game-container');
         textAlign(CENTER, CENTER);
-        textSize(64); // 跌落文字和輸入顯示放大
+        textSize(64);
         console.log('Setup complete: Canvas initialized');
       } catch (e) {
         console.error('Setup failed:', e);
@@ -212,7 +211,7 @@
       try {
         speed = parseInt(select('#speed-select').value());
         difficulty = parseInt(select('#difficulty-select').value());
-        fallSpeed = speed * 2;
+        fallSpeed = speed * 4; // 速度加快 1 倍
         words = [];
         particles = [];
         score = 0;
@@ -224,8 +223,8 @@
         levelUpTimer = 0;
         select('#start-screen').remove();
         gameState = 'playing';
-        spawnWord();
-        console.log(`Game started: speed=${speed}, difficulty=${difficulty}`);
+        spawnWord(); // 立即生成第一個文字
+        console.log(`Game started: speed=${speed}, difficulty=${difficulty}, fallSpeed=${fallSpeed}`);
       } catch (e) {
         console.error('Start game failed:', e);
       }
@@ -245,46 +244,44 @@
           gameState = 'gameOver';
         }
         fill(word.color);
-        textSize(64); // 跌落文字放大
+        textSize(64);
         text(word.char, word.x, word.y);
       }
 
       fill(0);
-      textSize(40); // 分數和輸入顯示放大
+      textSize(40);
       text(`分數: ${score} 關卡: ${level} 輸入: ${inputDisplay}`, width / 2, height - 30);
 
       if (errorTimer > 0) {
         fill(255, 0, 0);
-        textSize(64); // 錯誤訊息放大
+        textSize(64);
         text("輸入錯誤！", width / 2, height / 2);
         errorTimer--;
       }
 
       if (levelUpTimer > 0) {
         fill(255, 215, 0);
-        textSize(80); // Level Up 放大
+        textSize(80);
         text("Level Up!", width / 2, height / 2 - 50);
         levelUpTimer--;
       }
 
-      if (frameCount % (180 / speed) === 0) {
+      if (frameCount % (120 / speed) === 0) { // 縮短生成間隔
         spawnWord();
       }
     }
 
     function spawnWord() {
-      if (words.length >= 5) {
-        console.log('Max words reached, skipping spawn');
-        return;
-      }
-      let minY = Math.min(...words.map(w => w.y).concat([height]));
-      if (minY < 120) {
-        console.log('Words too close, skipping spawn');
+      // 放寬限制，確保初始文字生成
+      let minY = words.length === 0 ? height : Math.min(...words.map(w => w.y));
+      if (words.length >= 5 || minY < 80) {
+        console.log(`Spawn skipped: ${words.length >= 5 ? 'Max words reached' : 'Words too close'}, minY=${minY}`);
         return;
       }
       let maxLevel = difficulty === 1 ? 3 : (difficulty === 5 ? 7 : 10);
       let availableWords = cangjieDB.filter(w => w.level <= level && w.level <= maxLevel);
       if (availableWords.length === 0) {
+        console.warn('No available words, using all cangjieDB');
         availableWords = cangjieDB;
       }
       let word = random(availableWords);
@@ -299,7 +296,7 @@
         x: random(50, width - 50),
         y: 40,
         isStatic: false,
-        color: random(colorPalette) // 使用深色調色盤
+        color: random(colorPalette)
       });
       fallSpeed *= 1.1;
       console.log(`Spawned word: ${word.char} (${code}), Level: ${level}, fallSpeed: ${fallSpeed}`);
@@ -398,7 +395,7 @@
             level = Math.min(level + 1, 10);
             eliminatedWords = 0;
             levelUpTimer = 120;
-            fallSpeed = speed * 2 * (1 + 0.1 * level);
+            fallSpeed = speed * 4 * (1 + 0.1 * level); // 速度加快 1 倍
             if (levelUpSound) levelUpSound.play();
             console.log(`Level up: ${level}, New fallSpeed: ${fallSpeed}`);
           }
