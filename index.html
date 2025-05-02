@@ -56,7 +56,7 @@
   <div id="game-container"></div>
   <script>
     let gameState = 'start';
-    let speed, difficulty, fallSpeed;
+    let speed, difficulty, baseFallSpeed;
     let words = [];
     let particles = [];
     let score = 0;
@@ -67,65 +67,121 @@
     let errorTimer = 0;
     let levelUpTimer = 0;
     let hitSound, levelUpSound;
-
-    // 硬編碼倉頡碼資料庫（49 個字）
-    const cangjieDB = [
-      {"char": "日", "code": "A", "level": 1},
-      {"char": "月", "code": "B", "level": 1},
-      {"char": "金", "code": "C", "level": 1},
-      {"char": "木", "code": "D", "level": 1},
-      {"char": "水", "code": "E", "level": 1},
-      {"char": "火", "code": "F", "level": 1},
-      {"char": "土", "code": "G", "level": 1},
-      {"char": "竹", "code": "H", "level": 1},
-      {"char": "戈", "code": "I", "level": 1},
-      {"char": "十", "code": "J", "level": 1},
-      {"char": "由", "code": "HW", "level": 2},
-      {"char": "甲", "code": "WJ", "level": 2},
-      {"char": "申", "code": "LWL", "level": 2},
-      {"char": "田", "code": "W", "level": 2},
-      {"char": "白", "code": "HA", "level": 2},
-      {"char": "目", "code": "BU", "level": 2},
-      {"char": "石", "code": "MR", "level": 2},
-      {"char": "示", "code": "MF", "level": 2},
-      {"char": "禾", "code": "HD", "level": 2},
-      {"char": "穴", "code": "JC", "level": 2},
-      {"char": "丹", "code": "MY", "level": 3},
-      {"char": "舟", "code": "HY", "level": 3},
-      {"char": "虫", "code": "LI", "level": 3},
-      {"char": "血", "code": "HT", "level": 3},
-      {"char": "行", "code": "HLL", "level": 3},
-      {"char": "衣", "code": "YV", "level": 3},
-      {"char": "言", "code": "IV", "level": 3},
-      {"char": "谷", "code": "CRO", "level": 3},
-      {"char": "豆", "code": "MT", "level": 3},
-      {"char": "豕", "code": "MO", "level": 3},
-      {"char": "好", "code": "VND", "level": 4},
-      {"char": "明", "code": "AB", "level": 4},
-      {"char": "星", "code": "AP", "level": 4},
-      {"char": "早", "code": "AJ", "level": 4},
-      {"char": "里", "code": "WGG", "level": 5},
-      {"char": "吳", "code": "RML", "level": 5},
-      {"char": "店", "code": "YTD", "level": 5},
-      {"char": "占", "code": "YR", "level": 5},
-      {"char": "足", "code": "RHY", "level": 5},
-      {"char": "電", "code": "MFB", "level": 6},
-      {"char": "男", "code": "WKS", "level": 6},
-      {"char": "畫", "code": "LWGT", "level": 7},
-      {"char": "異", "code": "WTC", "level": 7},
-      {"char": "機", "code": "MGRR", "level": 8},
-      {"char": "腦", "code": "YTBU", "level": 9},
-      {"char": "贏", "code": "YRLH", "level": 9},
-      {"char": "靈", "code": "FFBM", "level": 10},
-      {"char": "廳", "code": "JTMN", "level": 10}
-    ];
+    let cangjieDB = [];
+    let spawnOrder = 0; // 追蹤文字生成序號
 
     function preload() {
       try {
         hitSound = loadSound('hit.mp3');
         levelUpSound = loadSound('levelup.mp3');
+        loadJSON('cangjie.json', (data) => {
+          cangjieDB = data;
+          console.log(`Loaded cangjieDB: ${cangjieDB.length} words`);
+        }, (err) => {
+          console.warn('Failed to load cangjie.json, using fallback DB:', err);
+          // 後備字庫（100 字範例，需擴展）
+          cangjieDB = [
+            {"char": "日", "code": "A", "level": 1},
+            {"char": "月", "code": "B", "level": 1},
+            {"char": "金", "code": "C", "level": 1},
+            {"char": "木", "code": "D", "level": 1},
+            {"char": "水", "code": "E", "level": 1},
+            {"char": "火", "code": "F", "level": 1},
+            {"char": "土", "code": "G", "level": 1},
+            {"char": "竹", "code": "H", "level": 1},
+            {"char": "戈", "code": "I", "level": 1},
+            {"char": "十", "code": "J", "level": 1},
+            {"char": "由", "code": "HW", "level": 2},
+            {"char": "甲", "code": "WJ", "level": 2},
+            {"char": "申", "code": "LWL", "level": 2},
+            {"char": "田", "code": "W", "level": 2},
+            {"char": "白", "code": "HA", "level": 2},
+            {"char": "目", "code": "BU", "level": 2},
+            {"char": "石", "code": "MR", "level": 2},
+            {"char": "示", "code": "MF", "level": 2},
+            {"char": "禾", "code": "HD", "level": 2},
+            {"char": "穴", "code": "JC", "level": 2},
+            {"char": "丹", "code": "MY", "level": 3},
+            {"char": "舟", "code": "HY", "level": 3},
+            {"char": "虫", "code": "LI", "level": 3},
+            {"char": "血", "code": "HT", "level": 3},
+            {"char": "行", "code": "HLL", "level": 3},
+            {"char": "衣", "code": "YV", "level": 3},
+            {"char": "言", "code": "IV", "level": 3},
+            {"char": "谷", "code": "CRO", "level": 3},
+            {"char": "豆", "code": "MT", "level": 3},
+            {"char": "豕", "code": "MO", "level": 3},
+            {"char": "好", "code": "VND", "level": 4},
+            {"char": "明", "code": "AB", "level": 4},
+            {"char": "星", "code": "AP", "level": 4},
+            {"char": "早", "code": "AJ", "level": 4},
+            {"char": "里", "code": "WGG", "level": 5},
+            {"char": "吳", "code": "RML", "level": 5},
+            {"char": "店", "code": "YTD", "level": 5},
+            {"char": "占", "code": "YR", "level": 5},
+            {"char": "足", "code": "RHY", "level": 5},
+            {"char": "電", "code": "MFB", "level": 6},
+            {"char": "男", "code": "WKS", "level": 6},
+            {"char": "畫", "code": "LWGT", "level": 7},
+            {"char": "異", "code": "WTC", "level": 7},
+            {"char": "機", "code": "MGRR", "level": 8},
+            {"char": "腦", "code": "YTBU", "level": 9},
+            {"char": "贏", "code": "YRLH", "level": 9},
+            {"char": "靈", "code": "FFBM", "level": 10},
+            {"char": "廳", "code": "JTMN", "level": 10},
+            {"char": "人", "code": "O", "level": 1},
+            {"char": "大", "code": "K", "level": 1},
+            {"char": "女", "code": "V", "level": 1},
+            {"char": "子", "code": "ND", "level": 2},
+            {"char": "小", "code": "NC", "level": 2},
+            {"char": "山", "code": "U", "level": 1},
+            {"char": "川", "code": "LLL", "level": 2},
+            {"char": "工", "code": "M", "level": 1},
+            {"char": "己", "code": "SU", "level": 2},
+            {"char": "巾", "code": "LB", "level": 2},
+            {"char": "口", "code": "R", "level": 1},
+            {"char": "門", "code": "AN", "level": 2},
+            {"char": "王", "code": "MG", "level": 2},
+            {"char": "手", "code": "Q", "level": 1},
+            {"char": "田", "code": "W", "level": 2},
+            {"char": "力", "code": "KS", "level": 2},
+            {"char": "心", "code": "P", "level": 1},
+            {"char": "文", "code": "YJ", "level": 2},
+            {"char": "方", "code": "YS", "level": 2},
+            {"char": "戶", "code": "IS", "level": 2},
+            {"char": "牛", "code": "HQ", "level": 2},
+            {"char": "犬", "code": "KH", "level": 2},
+            {"char": "玉", "code": "MGI", "level": 3},
+            {"char": "生", "code": "HQM", "level": 3},
+            {"char": "用", "code": "BQ", "level": 2},
+            {"char": "米", "code": "FD", "level": 2},
+            {"char": "糸", "code": "VIF", "level": 3},
+            {"char": "耳", "code": "SJ", "level": 2},
+            {"char": "車", "code": "KQN", "level": 3},
+            {"char": "足", "code": "RHY", "level": 5},
+            {"char": "長", "code": "SMV", "level": 4},
+            {"char": "馬", "code": "NF", "level": 3},
+            {"char": "骨", "code": "BB", "level": 4},
+            {"char": "魚", "code": "NWF", "level": 5},
+            {"char": "鳥", "code": "HAF", "level": 5},
+            {"char": "雨", "code": "MB", "level": 3},
+            {"char": "龍", "code": "YBP", "level": 8},
+            {"char": "麗", "code": "MBB", "level": 7},
+            {"char": "學", "code": "OFD", "level": 6},
+            {"char": "愛", "code": "BBP", "level": 6},
+            {"char": "國", "code": "WIM", "level": 6},
+            {"char": "家", "code": "JMG", "level": 5},
+            {"char": "書", "code": "IDS", "level": 5},
+            {"char": "語", "code": "IVG", "level": 6},
+            {"char": "數", "code": "VKD", "level": 6},
+            {"char": "計", "code": "IVK", "level": 5},
+            {"char": "電", "code": "MFB", "level": 6},
+            {"char": "腦", "code": "YTBU", "level": 9},
+            {"char": "體", "code": "BBP", "level": 6}
+          ];
+        });
       } catch (e) {
-        console.warn('Sound loading failed:', e);
+        console.warn('Preload failed:', e);
       }
     }
 
@@ -203,7 +259,7 @@
       try {
         speed = parseInt(select('#speed-select').value());
         difficulty = parseInt(select('#difficulty-select').value());
-        fallSpeed = speed * 4; // 速度加快一倍
+        baseFallSpeed = speed * 4; // 基礎速度（加快一倍）
         words = [];
         particles = [];
         score = 0;
@@ -213,10 +269,11 @@
         inputDisplay = '';
         errorTimer = 0;
         levelUpTimer = 0;
+        spawnOrder = 0;
         select('#start-screen').remove();
         gameState = 'playing';
         spawnWord();
-        console.log(`Game started: speed=${speed}, difficulty=${difficulty}, fallSpeed=${fallSpeed}`);
+        console.log(`Game started: speed=${speed}, difficulty=${difficulty}, baseFallSpeed=${baseFallSpeed}`);
       } catch (e) {
         console.error('Start game failed:', e);
       }
@@ -226,7 +283,7 @@
       for (let i = words.length - 1; i >= 0; i--) {
         let word = words[i];
         if (!word.isStatic) {
-          word.y = lerp(word.y, word.y + fallSpeed / frameRate(), 0.1);
+          word.y = lerp(word.y, word.y + word.fallSpeed / frameRate(), 0.1);
         }
         if (word.y >= height - 40 && !word.isStatic) {
           word.isStatic = true;
@@ -258,7 +315,7 @@
         levelUpTimer--;
       }
 
-      if (frameCount % (240 / speed) === 0) { // 增加間隔，減少列耗盡
+      if (frameCount % (300 / speed) === 0) { // 增加間隔，減少堆積
         spawnWord();
       }
     }
@@ -281,27 +338,30 @@
       if (availableColumns.length > 0) {
         x = random(availableColumns);
       } else {
-        // 退回隨機 x，確保間距
         let validX = false;
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < 20; i++) {
           x = random(60, width - 60);
           if (!occupiedXs.some(ox => Math.abs(ox - x) < 60)) {
             validX = true;
             break;
           }
         }
-        if (!validX) x = random(60, width - 60); // 最終退回
+        if (!validX) x = random(60, width - 60);
       }
 
+      let fallSpeed = baseFallSpeed * Math.max(0.5, 1 - 0.05 * spawnOrder); // 差異化速度
       words.push({
         char: word.char,
         code: word.code.trim().toUpperCase(),
         x: x,
         y: 40,
+        fallSpeed: fallSpeed,
         isStatic: false,
-        color: color(random(0, 100), random(0, 100), random(0, 100)) // 深色
+        color: color(random(0, 100), random(0, 100), random(0, 100)), // 深色
+        spawnOrder: spawnOrder
       });
-      console.log(`Spawned word: ${word.char} (${word.code}), Level: ${level}, X: ${x}, Available columns: ${availableColumns.length}`);
+      spawnOrder++;
+      console.log(`Spawned word: ${word.char} (${word.code}), Level: ${level}, X: ${x}, Speed: ${fallSpeed}, Available columns: ${availableColumns.length}`);
     }
 
     function drawParticles() {
@@ -349,6 +409,7 @@
     function restartGame() {
       select('#game-over-screen').remove();
       gameState = 'start';
+      spawnOrder = 0;
       console.log('Game restarted');
     }
 
@@ -378,23 +439,20 @@
     }
 
     function checkInput() {
-      // 記錄所有文字的 y 座標
-      console.log(`Words: [${words.map(w => `{char: ${w.char}, Y: ${w.y}, Static: ${w.isStatic}}`).join(', ')}]`);
+      console.log(`Words: [${words.map(w => `{char: ${w.char}, Y: ${w.y}, Static: ${w.isStatic}, Speed: ${w.fallSpeed}}`).join(', ')}]`);
       
       let lowestWord = null;
       let maxY = -Infinity;
-      // 優先選非靜止文字
       for (let word of words) {
-        if (!word.isStatic && word.y > maxY && word.y >= 50) { // 排除頂部文字
+        if (!word.isStatic && word.y > maxY) {
           lowestWord = word;
           maxY = word.y;
         }
       }
-      // 若無非靜止文字，選靜止文字
       if (!lowestWord) {
         maxY = -Infinity;
         for (let word of words) {
-          if (word.y > maxY && word.y >= 50) {
+          if (word.y > maxY) {
             lowestWord = word;
             maxY = word.y;
           }
@@ -416,9 +474,9 @@
             level = Math.min(level + 1, 10);
             eliminatedWords = 0;
             levelUpTimer = 120;
-            fallSpeed = speed * 4 * (1 + 0.1 * level); // 速度加快一倍
+            baseFallSpeed = speed * 4 * (1 + 0.1 * level); // 更新基礎速度
             if (levelUpSound) levelUpSound.play();
-            console.log(`Level up: ${level}, New fallSpeed: ${fallSpeed}`);
+            console.log(`Level up: ${level}, New baseFallSpeed: ${baseFallSpeed}`);
           }
           console.log(`Word eliminated: ${lowestWord.char}, Score: ${score}, Level: ${level}`);
         } else {
@@ -428,7 +486,7 @@
           errorTimer = 120;
         }
       } else {
-        console.log('No word available to check (Y >= 50)');
+        console.log('No word available to check');
         inputBuffer = '';
         inputDisplay = '';
         errorTimer = 120;
