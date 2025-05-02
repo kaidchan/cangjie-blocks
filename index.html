@@ -4,146 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>倉頡方塊</title>
-    <style>
-        body {
-            font-family: 'Microsoft JhengHei', Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            background-color: #f0f0f0;
-            margin: 0;
-            padding: 20px;
-        }
-        
-        #game-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            width: 100%;
-            max-width: 800px;
-        }
-        
-        #start-screen {
-            text-align: center;
-            background-color: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
-            width: 100%;
-        }
-        
-        h1 {
-            color: #333;
-            margin-bottom: 30px;
-        }
-        
-        .settings {
-            display: flex;
-            justify-content: space-around;
-            margin-bottom: 20px;
-        }
-        
-        .setting-group {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        
-        label {
-            margin-bottom: 10px;
-            font-weight: bold;
-        }
-        
-        select {
-            padding: 8px;
-            border-radius: 5px;
-            border: 1px solid #ccc;
-        }
-        
-        button {
-            padding: 10px 20px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            transition: background-color 0.3s;
-        }
-        
-        button:hover {
-            background-color: #45a049;
-        }
-        
-        #game-screen {
-            display: none;
-            width: 100%;
-            position: relative;
-        }
-        
-        #game-board {
-            width: 300px;
-            height: 600px;
-            margin: 0 auto;
-            background-color: #333;
-            position: relative;
-            overflow: hidden;
-            border: 2px solid #555;
-        }
-        
-        .character {
-            position: absolute;
-            color: white;
-            font-size: 24px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background-color: rgba(0, 0, 0, 0.5);
-            border-radius: 5px;
-        }
-        
-        #input-container {
-            margin-top: 20px;
-            text-align: center;
-        }
-        
-        #cj-input {
-            padding: 10px;
-            font-size: 16px;
-            width: 200px;
-            border-radius: 5px;
-            border: 1px solid #ccc;
-        }
-        
-        #game-info {
-            display: flex;
-            justify-content: space-between;
-            width: 300px;
-            margin: 10px auto;
-            font-size: 18px;
-        }
-        
-        #game-over {
-            display: none;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 20px;
-            border-radius: 10px;
-            text-align: center;
-            z-index: 100;
-        }
-        
-        #next-character {
-            margin-top: 20px;
-            text-align: center;
-            font-size: 20px;
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div id="game-container">
@@ -164,12 +25,6 @@
                         <option value="1" selected>LV.1 (1-2碼)</option>
                         <option value="2">LV.2 (1-3碼)</option>
                         <option value="3">LV.3 (2-3碼)</option>
-                        <option value="4">LV.4 (2-4碼)</option>
-                        <option value="5">LV.5 (3-4碼)</option>
-                        <option value="6">LV.6 (3-5碼)</option>
-                        <option value="7">LV.7 (4-5碼)</option>
-                        <option value="8">LV.8 (4-6碼)</option>
-                        <option value="9">LV.9 (5-6碼)</option>
                         <option value="10">LV.10 (5+碼)</option>
                     </select>
                 </div>
@@ -181,13 +36,14 @@
             <div id="game-info">
                 <div>等級: <span id="level-display">1</span></div>
                 <div>分數: <span id="score">0</span></div>
+                <div>生命: <span id="lives">3</span></div>
             </div>
             <div id="game-board"></div>
             <div id="input-container">
                 <input type="text" id="cj-input" placeholder="輸入倉頡碼" autocomplete="off">
             </div>
             <div id="next-character">
-                下一個: <span id="next-char"></span>
+                下一個: <span id="next-char">?</span>
             </div>
             <div id="game-over">
                 <h2>遊戲結束</h2>
@@ -196,181 +52,6 @@
             </div>
         </div>
     </div>
-
-    <script>
-        // 倉頡碼字典 (簡化版)
-        const cjDict = {
-            "日": "a", "月": "b", "金": "c", "木": "d", "水": "e",
-            "火": "f", "土": "g", "竹": "h", "戈": "i", "十": "j",
-            "大": "k", "中": "l", "一": "m", "弓": "n", "人": "o",
-            "心": "p", "手": "q", "口": "r", "尸": "s", "廿": "t",
-            "山": "u", "女": "v", "田": "w", "卜": "y", "難": "x",
-            "我": "hqi", "是": "amy", "的": "hapi", "你": "onf", "好": "vnd",
-            "愛": "bbbe", "中": "l", "國": "wimi", "人": "o", "學": "hbnd",
-            "生": "hqm", "用": "bq", "文": "yk", "字": "jnd", "書": "lby",
-            "寫": "jcmf", "讀": "yrcw", "說": "yrci", "話": "yrhjr", "電": "mbwu",
-            "腦": "byvb", "手": "q", "機": "dhi", "電": "mbwu", "視": "mfbhu",
-            "影": "fbhaf", "音": "yta", "樂": "vvid", "遊": "ysnh", "戲": "yitmc",
-            "開": "anmt", "關": "anvit", "門": "an", "窗": "jchwo", "房": "hsyhs",
-            "屋": "smg", "家": "jmso", "學": "hbnd", "校": "dyck", "工": "m",
-            "作": "oos", "休": "od", "息": "hup", "睡": "lmym", "覺": "hbbuu",
-            "吃": "ron", "喝": "rapv", "玩": "mgmmu", "樂": "vvid", "快": "pdk",
-            "慢": "pawe", "高": "yrbr", "低": "hihpm", "長": "smv", "短": "mrtvi",
-            "多": "nini", "少": "fh", "新": "ydhl", "舊": "toix", "買": "buc",
-            "賣": "gcwlc", "錢": "cii", "財": "bcdh", "富": "jmrw", "貴": "lmc",
-            "窮": "jchn", "平": "mfjj", "安": "jv", "危": "nmu", "幸": "gtj",
-            "福": "mrwmr", "快": "pdk", "樂": "vvid", "歡": "trkf", "喜": "grtr",
-            "笑": "hkl", "哭": "rryk", "怒": "vkp", "哀": "yrhv", "樂": "vvid",
-            "悲": "lyp", "傷": "ooah", "痛": "knib", "苦": "tr", "甜": "hrtm",
-            "酸": "mwice", "辣": "kddl", "鹹": "toir", "淡": "eff", "鹹": "yiwhr",
-            "香": "hda", "臭": "huk", "美": "tgk", "醜": "mwymu", "紅": "vfm",
-            "黃": "tlwc", "藍": "tsit", "綠": "vvmw", "紫": "ypvif", "黑": "wgf",
-            "白": "ha", "灰": "kf", "亮": "yrbn", "暗": "ayta", "明": "ab",
-            "清": "eqmb", "濁": "ewli", "乾": "mjaj", "濕": "etwb", "冷": "imoy",
-            "熱": "qif", "暖": "ambb", "涼": "iyrf", "春": "qka", "夏": "muye",
-            "秋": "hdf", "冬": "hey", "東": "dw", "南": "jb", "西": "mcw",
-            "北": "lmp", "上": "ym", "下": "my", "左": "km", "右": "kr",
-            "前": "tbln", "後": "houv", "裡": "ywg", "外": "niy", "中": "l",
-            "間": "ana", "旁": "ybyhs", "邊": "yhsb", "角": "nbg", "方": "yhs",
-            "圓": "wrb", "正": "mym", "反": "he", "同": "bmr", "異": "wytc",
-            "大": "k", "小": "nc", "多": "nini", "少": "fh", "長": "smv",
-            "短": "mrtvi", "高": "yrbr", "低": "hihpm", "胖": "bfq", "瘦": "hhxe",
-            "強": "nili", "弱": "nmi", "男": "wk", "女": "v", "老": "jkp",
-            "少": "fh", "幼": "vish", "病": "komb", "健": "onkq", "康": "ilei",
-            "死": "mnp", "活": "ehjr", "生": "hqm", "命": "omrl", "運": "yjjc",
-            "動": "hgks", "靜": "qbbsd", "快": "pdk", "慢": "pawe", "行": "homn",
-            "走": "gyo", "跑": "rpru", "跳": "rmlmo", "站": "ytyr", "坐": "oog",
-            "臥": "slo", "立": "yt", "飛": "no", "遊": "ysnh", "泳": "eine",
-            "船": "hycr", "車": "jwj", "馬": "sqsf", "鳥": "haf", "魚": "nwf",
-            "蟲": "lii", "狗": "khpr", "貓": "bhtw", "豬": "mhja", "牛": "hq",
-            "羊": "tq", "雞": "bkf", "鴨": "klwb", "鵝": "hfhaf", "兔": "nahi",
-            "龍": "ypsp", "虎": "ypn", "狼": "khiav", "狐": "khhvo", "熊": "ipf",
-            "鹿": "ixp", "象": "napo", "猴": "khonk", "鼠": "hxvy", "米": "fd",
-            "飯": "fdhae", "麵": "jnmwl", "包": "pru", "餅": "fdttc", "糖": "fdilr",
-            "果": "wd", "菜": "tbd", "肉": "obo", "魚": "nwf", "蛋": "noau",
-            "奶": "vnhs", "茶": "tod", "酒": "emcw", "水": "e", "湯": "eamh",
-            "冰": "ime", "雪": "mbsm", "雨": "mlby", "風": "hnhni", "雲": "mbmmi",
-            "雷": "mbw", "電": "mbwu", "星": "ahqm", "月": "b", "日": "a",
-            "天": "mk", "地": "gpd", "山": "u", "河": "emnr", "海": "ehwks",
-            "湖": "ejrb", "森": "ddd", "林": "dd", "木": "d", "花": "top",
-            "草": "taj", "樹": "dtwi", "葉": "tptd", "根": "dav", "枝": "dje",
-            "果": "wd", "種": "hdhjg", "植": "djbm", "物": "hqphh", "動": "hgks",
-            "靜": "qbbsd", "生": "hqm", "死": "mnp", "活": "ehjr", "命": "omrl",
-            "運": "yjjc", "氣": "ond", "力": "ks", "能": "ibpp", "量": "amwg",
-            "質": "hlqc", "色": "nau", "光": "fmu", "影": "fbhaf", "形": "mthhh",
-            "聲": "gahaf", "音": "yta", "樂": "vvid", "歌": "mrrher", "舞": "otno",
-            "畫": "lgwm", "圖": "wjbm", "書": "lby", "寫": "jcmf", "讀": "yrcw",
-            "說": "yrci", "話": "yrhjr", "語": "yrmmr", "文": "yk", "字": "jnd",
-            "句": "pr", "章": "ytj", "節": "halim", "篇": "hysb", "頁": "mbuc",
-            "首": "thbu", "面": "mwyl", "目": "bu", "眼": "buav", "睛": "buqmb",
-            "耳": "sj", "鼻": "hulw", "口": "r", "舌": "hpr", "牙": "mvh",
-            "齒": "ymuo", "頭": "mtmbc", "髮": "shike", "手": "q", "指": "qpa",
-            "掌": "fbrq", "拳": "fqq", "腳": "bcru", "腿": "byav", "身": "hxh",
-            "體": "hhtwt", "衣": "yhv", "服": "sboe", "褲": "lyjr", "鞋": "tjgy",
-            "帽": "lbabu", "襪": "ltwi", "巾": "lb", "布": "klb", "紙": "vmpu",
-            "筆": "hlq", "墨": "wg", "硯": "mrmr", "印": "hpsl", "章": "ytj",
-            "印": "hpsl", "色": "nau", "彩": "bdhml", "紅": "vfm", "黃": "tlwc",
-            "藍": "tsit", "綠": "vvmw", "紫": "ypvif", "黑": "wgf", "白": "ha",
-            "灰": "kf", "金": "c", "銀": "cav", "銅": "cbmr", "鐵": "chgi",
-            "鋼": "cbtu", "錢": "cii", "幣": "olb", "財": "bcdh", "富": "jmrw",
-            "貧": "chuc", "窮": "jchn", "貴": "lmc", "賤": "boii", "買": "buc",
-            "賣": "gcwlc", "價": "omwc", "值": "ojbm", "數": "fvok", "量": "amwg",
-            "度": "ite", "寸": "di", "尺": "so", "丈": "jk", "分": "csh",
-            "厘": "mwgf", "毫": "yruu", "斤": "hml", "兩": "mlbo", "錢": "cii",
-            "斗": "yj", "升": "ht", "合": "omr", "石": "mr", "擔": "qncr",
-            "斤": "hml", "克": "jru", "公": "ci", "斤": "hml", "兩": "mlbo",
-            "錢": "cii", "分": "csh", "厘": "mwgf", "毫": "yruu", "微": "houk",
-            "忽": "php", "秒": "hdfh", "分": "csh", "時": "agdi", "刻": "yon",
-            "日": "a", "月": "b", "年": "oq", "歲": "mihni", "世": "pt",
-            "紀": "vmsu", "元": "mmu", "旦": "am", "早": "aj", "晨": "ammvh",
-            "晚": "anau", "夜": "yonk", "昨": "ahs", "今": "oin", "明": "ab",
-            "後": "houv", "前": "tbln", "來": "doo", "去": "gi", "回": "wr",
-            "進": "yogt", "出": "uu", "入": "oh", "上": "ym", "下": "my",
-            "左": "km", "右": "kr", "中": "l", "間": "ana", "旁": "ybyhs",
-            "邊": "yhsb", "角": "nbg", "方": "yhs", "圓": "wrb", "正": "mym",
-            "反": "he", "同": "bmr", "異": "wytc", "對": "tgi", "錯": "cta",
-            "真": "jbuc", "假": "orse", "善": "tgr", "惡": "mmp", "美": "tgk",
-            "醜": "mwymu", "新": "ydhl", "舊": "toix", "好": "vnd", "壞": "gywv",
-            "利": "hdln", "害": "jmmr", "安": "jv", "危": "nmu", "強": "nili",
-            "弱": "nmi", "硬": "mrjlr", "軟": "jjno", "輕": "jjmvm", "重": "hjwg",
-            "遠": "ymmu", "近": "yhml", "高": "yrbr", "低": "hihpm", "深": "ebcd",
-            "淺": "eii", "多": "nini", "少": "fh", "長": "smv", "短": "mrtvi",
-            "寬": "jtbu", "窄": "jhos", "厚": "mwhr", "薄": "tefi", "濃": "etwv",
-            "淡": "eff", "滿": "etlb", "空": "jcm", "實": "jbmc", "虛": "ypmh",
-            "有": "kb", "無": "otf", "是": "amy", "非": "lmyyy", "和": "hdr",
-            "合": "omr", "分": "csh", "離": "yubg", "聚": "seo", "散": "tbok",
-            "集": "ogd", "團": "wij", "隊": "nltc", "群": "srtq", "眾": "hooo",
-            "單": "rrj", "雙": "oge", "各": "her", "每": "owy", "全": "omg",
-            "部": "yrnl", "分": "csh", "總": "vfhwp", "別": "rsln", "另": "rks",
-            "外": "niy", "內": "ob", "公": "ci", "私": "hdi", "共": "tc",
-            "同": "bmr", "異": "wytc", "相": "dbu", "互": "mvvm", "交": "yc",
-            "換": "qnbk", "變": "vfok", "化": "op", "改": "ysok", "革": "tlj",
-            "命": "omrl", "令": "oii", "法": "egi", "律": "hoq", "規": "qobuu",
-            "則": "bcln", "制": "hbln", "度": "ite", "量": "amwg", "衡": "honkn",
-            "權": "doge", "利": "hdln", "益": "tct", "害": "jmmr", "優": "ombbe",
-            "劣": "fsh", "勝": "bhqm", "敗": "bco", "成": "ihs", "功": "mks",
-            "名": "nir", "聲": "gahaf", "譽": "hccyr", "榮": "tbd", "耀": "fusmg",
-            "光": "fmu", "輝": "fubjj", "煌": "famg", "亮": "yrbn", "明": "ab",
-            "暗": "ayta", "黑": "wgf", "白": "ha", "紅": "vfm", "黃": "tlwc",
-            "藍": "tsit", "綠": "vvmw", "紫": "ypvif", "橙": "dnot", "青": "qmb",
-            "灰": "kf", "粉": "fdcsh", "棕": "djmf", "褐": "dgap", "彩": "bdhml",
-            "色": "nau", "顏": "yhmbc", "貌": "buhu", "形": "mthhh", "狀": "vik",
-            "態": "bip", "樣": "dtge", "式": "ipm", "格": "dher", "局": "ssr",
-            "勢": "qksi", "力": "ks", "氣": "ond", "風": "hnhni", "雨": "mlby",
-            "雲": "mbmmi", "雷": "mbw", "電": "mbwu", "雪": "mbsm", "冰": "ime",
-            "霜": "mbdbu", "露": "mbrmr", "霧": "mbhhl", "霰": "mbtbk", "霞": "mbrse",
-            "霓": "mbyub", "霖": "mbdd", "霸": "mbtjb", "霹": "mbsrj", "靂": "mbmhm",
-            "震": "mbmmc", "霄": "mbfb", "霽": "mbykl", "霾": "mbwlg", "霈": "mbeqb",
-            "霢": "mbbbe", "霑": "mbyr", "霙": "mbtlk", "霋": "mbjlv", "霐": "mbeii",
-            "霒": "mboiv", "霕": "mbpuc", "霗": "mboir", "霘": "mbeer", "霙": "mbtlk",
-            "霛": "mbmbi", "霝": "mbrrr", "霟": "mbtcg", "霠": "mbytg", "霡": "mbbbe",
-            "霢": "mbbbe", "霣": "mbrbc", "霤": "mbhhw", "霥": "mbbmo", "霦": "mbdmc",
-            "霧": "mbhhl", "霨": "mbsfi", "霩": "mbyrb", "霪": "mbebg", "霫": "mbsma",
-            "霬": "mbwtc", "霮": "mbeav", "霯": "mbnot", "霰": "mbtbk", "霱": "mbnlb",
-            "露": "mbrmr", "霳": "mbnlm", "霴": "mbmei", "霵": "mbryo", "霶": "mbeub",
-            "霷": "mbyrv", "霸": "mbtjb", "霹": "mbsrj", "霺": "mbhou", "霻": "mbmrw",
-            "霼": "mbmfi", "霽": "mbhaf", "霾": "mbwlg", "霿": "mbbuh", "靀": "mbmbo",
-            "靁": "mbwww", "靂": "mbmhm", "靃": "mbmbf", "靄": "mbytv", "靅": "mbmhc",
-            "靆": "mbmmp", "靇": "mbybp", "靉": "mbbbe", "靊": "mbhgf", "靋": "mbmhm",
-            "靌": "mbjbc", "靍": "mbhaf", "靎": "mbhaf", "靏": "mbhaf", "靐": "mbmbm",
-            "靑": "mbqmb", "靔": "mbhaf", "靕": "mbmym", "靗": "mbfbu", "靘": "mbqbu",
-            "靚": "mbqmb", "靛": "mbjmo", "靝": "mbhaf", "靟": "mbhhu", "靡": "mbdmc",
-            "面": "mbgrc", "靣": "mbbuc", "靤": "mbpru", "靥": "mbmjk", "靧": "mbgrv",
-            "靨": "mbmwk", "革": "mbapp", "靪": "mbmn", "靫": "mbei", "靬": "mbmj",
-            "靭": "mbshi", "靮": "mbpi", "靯": "mbg", "靰": "mbmu", "靱": "mbshi",
-            "靲": "mboin", "靳": "mbtml", "靴": "mbop", "靶": "mbau", "靷": "mbl",
-            "靸": "mbnhe", "靹": "mbmb", "靺": "mbdj", "靻": "mbbm", "靼": "mbam",
-            "靽": "mbuq", "靾": "mbpt", "靿": "mbvis", "鞀": "mbshr", "鞁": "mbdhe",
-            "鞂": "mbhd", "鞃": "mbni", "鞄": "mbpru", "鞅": "mblbk", "鞆": "mbtk",
-            "鞇": "mbwk", "鞈": "mbomr", "鞉": "mbhqo", "鞊": "mbgr", "鞋": "mbggy",
-            "鞌": "mbtj", "鞍": "mbjv", "鞎": "mbav", "鞏": "mbhne", "鞐": "mbyg",
-            "鞑": "mbymr", "鞒": "mbhkl", "鞓": "mbkgg", "鞔": "mbnau", "鞕": "mbmjk",
-            "鞖": "mbhdv", "鞗": "mbol", "鞘": "mbfb", "鞙": "mbrb", "鞚": "mbjcm",
-            "鞛": "mbytr", "鞜": "mbas", "鞝": "mbfbr", "鞞": "mbhwj", "鞟": "mbyrb",
-            "鞠": "mbpfd", "鞡": "mbfq", "鞢": "mbptd", "鞣": "mbnhd", "鞤": "mbyjj",
-            "鞥": "mboat", "鞦": "mbhdf", "鞧": "mbhdf", "鞨": "mbapv", "鞩": "mbfbq",
-            "鞪": "nkmb", "鞫": "mbpjr", "鞬": "mbnkq", "鞭": "mbokq", "鞮": "mbamo",
-            "鞯": "mbtbk", "鞰": "mbwot", "鞱": "mbbhd", "鞲": "mbtlb", "鞳": "mbtor",
-            "鞴": "mbtpb", "鞵": "mbnok", "鞶": "mbbut", "鞷": "mrmb", "鞸": "mbttb",
-            "鞹": "mbyrb", "鞺": "mbfbg", "鞻": "mblvv", "鞼": "mblmc", "鞽": "mbhkb",
-            "鞾": "mbopd", "鞿": "mbhvi", "韀": "mbsma", "韁": "mbmwm", "韂": "mbncr",
-            "韃": "mbygq", "韄": "mbtme", "韅": "mbvfm", "韆": "mbyx", "韇": "mbgmc",
-            "韈": "mbtwi", "韉": "mbtif", "韊": "mbtaw", "韋": "dmq", "韌": "dmshi",
-            "韍": "dmike", "韎": "dmdj", "韏": "dmfqu", "韐": "dmomr", "韑": "dmfbu",
-            "韒": "dmsmj", "韓": "dmjjj", "韔": "dmvvd", "韕": "dmybb", "韖": "dmnmu",
-            "韗": "dmbjj", "韘": "dmptd", "韙": "dmaoc", "韚": "dmtlm", "韛": "dmthb",
-            "韜": "dmbhn", "韝": "dmttb", "韞": "dmwot", "韟": "dmhaf", "韠": "dmwtj",
-            "韡": "dmdmq", "韢": "dmymp", "韣": "dmwli", "韤": "dmtwi", "韥": "dmgwc",
-            "韨": "dmike", "韮": "tosmm", "韯": "jihm", "韰": "lelm", "韱": "toim",
-            "韲": "yxm", "音": "yta", "韵": "yapim", "韶": "yashr", "韴": "ytmlb",
-            "韷": "ytu", "韸": "ytpim", "韹": "ythag", "韺": "ytlbk", "韻": "ytwot",
-            "韼": "ytpru", "韽": "ytoiw", "韾": "ytgea", "響": "ytvhl", "頀": "ytrre",
-            "頁": "mbuc", "頂": "mnmbc", "頃": "pmbc", "頄": "knmbc", "項": "mmbc",
-            "順": "lllc", "須": "hhmbc", "頉": "ymmbc", "頊": "mgmbc", "頋": "mumbc",
-            "頌": "cimbc", "頍": "jembc", "頎": "hlmbc", "頏": "ynmbc", "預": "nnmbc",
-            "頑": "mumbc", "頒": "chmbc", "頓": "pumbc", "頔": "lwmbc", "頕": "yrmbc",
-            "頖": "fqmbc", "頗": "dembc", "領": "oimbc", "頙": "mmmbc", "頚": "mfmc",
-            "頛": "bdmbc", "頜": "jrmbc", "頝": "yknbc", "頞": "jvmbc", "頟": "hrmbc",
-            "頠": "numc", "頡": "grmbc", "頢": "pdmbc", "頣": "slmbc", "頤": "slmc",
-            "頥": "slmbc", "頦": "yombc", "頧": "kbmbc", "頨": "sumbc", "頩": "ttmbc",
-            "頪": "ffmbc", "頫": "hfmbc", "頬": "koo", "頭": "mtmbc", "
+    <script src="script.js"></script>
+</body>
+</html>
