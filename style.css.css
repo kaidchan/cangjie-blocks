@@ -1,0 +1,24 @@
+/* 將之前提供的完整CSS代碼複製到這裡 */
+/* 因篇幅限制，這裡只展示關鍵部分，完整CSS請參考之前的回答或GitHub示例 */
+
+body {
+    font-family: 'Microsoft JhengHei', Arial, sans-serif;
+    background-color: #f0f0f0;
+}
+
+#game-board {
+    width: 300px;
+    height: 600px;
+    background-color: #333;
+    position: relative;
+    border: 2px solid #555;
+}
+
+.character {
+    position: absolute;
+    color: white;
+    font-size: 24px;
+    text-align: center;
+    background-color: rgba(0, 0, 0, 0.5);
+    border-radius: 5px;
+}
