@@ -122,7 +122,6 @@
 
     function preload() {
       try {
-        // 需上傳 hit.mp3 和 levelup.mp3 到儲存庫
         hitSound = loadSound('hit.mp3');
         levelUpSound = loadSound('levelup.mp3');
       } catch (e) {
@@ -135,7 +134,7 @@
         let canvas = createCanvas(600, 800);
         canvas.parent('game-container');
         textAlign(CENTER, CENTER);
-        textSize(32);
+        textSize(64); // 文字放大一倍
         console.log('Setup complete: Canvas initialized');
       } catch (e) {
         console.error('Setup failed:', e);
@@ -145,7 +144,6 @@
 
     function draw() {
       try {
-        // 背景色隨關卡變化
         let hue = (level * 30) % 360;
         background(`hsl(${hue}, 50%, 90%)`);
         drawGrid();
@@ -205,7 +203,7 @@
       try {
         speed = parseInt(select('#speed-select').value());
         difficulty = parseInt(select('#difficulty-select').value());
-        fallSpeed = speed * 2;
+        fallSpeed = speed * 4; // 速度加快一倍
         words = [];
         particles = [];
         score = 0;
@@ -218,7 +216,7 @@
         select('#start-screen').remove();
         gameState = 'playing';
         spawnWord();
-        console.log(`Game started: speed=${speed}, difficulty=${difficulty}`);
+        console.log(`Game started: speed=${speed}, difficulty=${difficulty}, fallSpeed=${fallSpeed}`);
       } catch (e) {
         console.error('Start game failed:', e);
       }
@@ -237,13 +235,14 @@
         if (word.y <= 40 && word.isStatic) {
           gameState = 'gameOver';
         }
-        fill(word.color || color(random(100, 255), random(100, 255), random(100, 255)));
+        fill(word.color);
         text(word.char, word.x, word.y);
       }
 
       fill(0);
-      textSize(20);
+      textSize(32); // 分數和輸入顯示保持較小
       text(`分數: ${score} 關卡: ${level} 輸入: ${inputDisplay}`, width / 2, height - 30);
+      textSize(64); // 恢復跌落文字大小
 
       if (errorTimer > 0) {
         fill(255, 0, 0);
@@ -253,8 +252,9 @@
 
       if (levelUpTimer > 0) {
         fill(255, 215, 0);
-        textSize(40);
+        textSize(48);
         text("Level Up!", width / 2, height / 2 - 50);
+        textSize(64);
         levelUpTimer--;
       }
 
@@ -270,15 +270,24 @@
         availableWords = cangjieDB;
       }
       let word = random(availableWords);
+
+      // 避免 x 軸重疊
+      let columns = Array.from({length: 10}, (_, i) => 60 + i * 60); // 10 列：60, 120, ..., 540
+      let occupiedXs = words.map(w => w.x);
+      let availableColumns = columns.filter(col => 
+        !occupiedXs.some(x => Math.abs(x - col) < 60)
+      );
+      let x = availableColumns.length > 0 ? random(availableColumns) : random(60, width - 60);
+
       words.push({
         char: word.char,
-        code: word.code.trim().toUpperCase(), // 確保碼一致
-        x: random(50, width - 50),
+        code: word.code.trim().toUpperCase(),
+        x: x,
         y: 40,
         isStatic: false,
-        color: color(random(100, 255), random(100, 255), random(100, 255))
+        color: color(random(0, 100), random(0, 100), random(0, 100)) // 深色
       });
-      console.log(`Spawned word: ${word.char} (${word.code}), Level: ${level}`);
+      console.log(`Spawned word: ${word.char} (${word.code}), Level: ${level}, X: ${x}`);
     }
 
     function drawParticles() {
@@ -356,28 +365,26 @@
 
     function checkInput() {
       let lowestWord = null;
-      let minY = -Infinity;
-      // 優先選非靜止文字
+      let maxY = -Infinity;
       for (let word of words) {
-        if (!word.isStatic && word.y > minY) {
+        if (!word.isStatic && word.y > maxY) {
           lowestWord = word;
-          minY = word.y;
+          maxY = word.y;
         }
       }
-      // 若無非靜止文字，選靜止文字
       if (!lowestWord) {
-        minY = -Infinity;
+        maxY = -Infinity;
         for (let word of words) {
-          if (word.y > minY) {
+          if (word.y > maxY) {
             lowestWord = word;
-            minY = word.y;
+            maxY = word.y;
           }
         }
       }
       if (lowestWord) {
         let input = inputBuffer.trim().toUpperCase();
         let expected = lowestWord.code.trim().toUpperCase();
-        console.log(`Check input: "${input}", Expected: "${expected}", Word: ${lowestWord.char}`);
+        console.log(`Check input: "${input}", Expected: "${expected}", Word: ${lowestWord.char}, Y: ${maxY}`);
         if (input === expected) {
           createParticles(lowestWord.x, lowestWord.y, lowestWord.color);
           if (hitSound) hitSound.play();
@@ -390,7 +397,7 @@
             level = Math.min(level + 1, 10);
             eliminatedWords = 0;
             levelUpTimer = 120;
-            fallSpeed = speed * 2 * (1 + 0.1 * level);
+            fallSpeed = speed * 4 * (1 + 0.1 * level); // 速度加快一倍
             if (levelUpSound) levelUpSound.play();
             console.log(`Level up: ${level}, New fallSpeed: ${fallSpeed}`);
           }
