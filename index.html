@@ -258,7 +258,7 @@
         levelUpTimer--;
       }
 
-      if (frameCount % (180 / speed) === 0) {
+      if (frameCount % (240 / speed) === 0) { // 增加間隔，減少列耗盡
         spawnWord();
       }
     }
@@ -277,7 +277,21 @@
       let availableColumns = columns.filter(col => 
         !occupiedXs.some(x => Math.abs(x - col) < 60)
       );
-      let x = availableColumns.length > 0 ? random(availableColumns) : random(60, width - 60);
+      let x;
+      if (availableColumns.length > 0) {
+        x = random(availableColumns);
+      } else {
+        // 退回隨機 x，確保間距
+        let validX = false;
+        for (let i = 0; i < 10; i++) {
+          x = random(60, width - 60);
+          if (!occupiedXs.some(ox => Math.abs(ox - x) < 60)) {
+            validX = true;
+            break;
+          }
+        }
+        if (!validX) x = random(60, width - 60); // 最終退回
+      }
 
       words.push({
         char: word.char,
@@ -287,7 +301,7 @@
         isStatic: false,
         color: color(random(0, 100), random(0, 100), random(0, 100)) // 深色
       });
-      console.log(`Spawned word: ${word.char} (${word.code}), Level: ${level}, X: ${x}`);
+      console.log(`Spawned word: ${word.char} (${word.code}), Level: ${level}, X: ${x}, Available columns: ${availableColumns.length}`);
     }
 
     function drawParticles() {
@@ -364,18 +378,23 @@
     }
 
     function checkInput() {
+      // 記錄所有文字的 y 座標
+      console.log(`Words: [${words.map(w => `{char: ${w.char}, Y: ${w.y}, Static: ${w.isStatic}}`).join(', ')}]`);
+      
       let lowestWord = null;
       let maxY = -Infinity;
+      // 優先選非靜止文字
       for (let word of words) {
-        if (!word.isStatic && word.y > maxY) {
+        if (!word.isStatic && word.y > maxY && word.y >= 50) { // 排除頂部文字
           lowestWord = word;
           maxY = word.y;
         }
       }
+      // 若無非靜止文字，選靜止文字
       if (!lowestWord) {
         maxY = -Infinity;
         for (let word of words) {
-          if (word.y > maxY) {
+          if (word.y > maxY && word.y >= 50) {
             lowestWord = word;
             maxY = word.y;
           }
@@ -409,7 +428,7 @@
           errorTimer = 120;
         }
       } else {
-        console.log('No word available to check');
+        console.log('No word available to check (Y >= 50)');
         inputBuffer = '';
         inputDisplay = '';
         errorTimer = 120;
